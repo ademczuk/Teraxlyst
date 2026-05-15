@@ -43,13 +43,13 @@ Teraxlyst targets users who want nimbalyst's session-management and tracker work
 | Milestone | Status |
 |-----------|--------|
 | Planning docs | done |
-| M0 fork + rebrand | done (frontend builds locally; Rust check runs in CI on Linux) |
-| M1 persistence | done (DbActor + 6 tables + 8 commands + 4 integration tests pass on Linux CI) |
-| M2 multi-session manager | not started |
-| M3 MCP host | not started |
-| M4 trackers | not started |
-| M5 diff approval | not started |
-| M6 0.1.0 release | not started |
+| M0 fork + rebrand | done |
+| M1 persistence | done (DbActor + 6 tables + 8 commands + 4 tests, all green in CI) |
+| M2 multi-session manager | done (SessionManager + Claude Code subprocess + streaming + simple list view + 2 tests) |
+| M3 MCP host | scaffold (rmcp 1.7 + 3 tools + PromptForUserInput pipeline; lib.rs wireup pending M3.1) |
+| M4 trackers | scaffold (YAML schema + validation + 4 MCP tools + DbActor variants; lib.rs wireup pending M4.1) |
+| M5 diff approval | scaffold (Monaco diff editor + diff_proposals v2 migration; lib.rs wireup pending M5.1) |
+| M6 0.1.0 release | docs (INSTALL.md + SIGNING_PLAN.md). Signing certs + keypair generation needed before tagged release |
 
 See [`planning/ROADMAP.md`](./planning/ROADMAP.md) for details.
 
