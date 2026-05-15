@@ -1,0 +1,47 @@
+# Local databases and runtime state
+*.db
+*.sqlite
+*.sqlite3
+data/
+*.log
+.rag-cache/
+
+# Rust
+target/
+Cargo.lock
+**/*.rs.bk
+
+# Node / pnpm (for when M0 lands)
+node_modules/
+dist/
+build/
+.pnpm-store/
+pnpm-debug.log
+
+# Tauri build output
+src-tauri/target/
+src-tauri/Cargo.lock
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*~
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Secrets
+*.pem
+*.key
+
+# Local working files
+*.tmp
+*.bak
