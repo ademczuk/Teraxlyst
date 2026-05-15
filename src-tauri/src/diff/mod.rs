@@ -1,3 +1,8 @@
+// M5 commands exist but their registration in tauri::generate_handler!
+// was not completed before the sub-agent rate-limited. Allow dead code
+// until M5.1 wires diff_apply_and_resolve into lib.rs.
+#![allow(dead_code)]
+
 // Diff approval module. See planning/ARCHITECTURE.md section 6 and
 // planning/M5_IMPLEMENTATION.md.
 //
