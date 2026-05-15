@@ -213,7 +213,7 @@ function attachSession(
       })
       .catch((e) => {
         s.ptyOpening = false;
-        console.error("[terax] openPty failed:", e);
+        console.error("[teraxlyst] openPty failed:", e);
       });
   }
 }
@@ -252,7 +252,7 @@ export async function respawnSession(
     pty = await openPtyForSession(leafId, s, cwd ?? s.initialCwd);
   } catch (e) {
     s.ptyOpening = false;
-    console.error("[terax] respawn openPty failed:", e);
+    console.error("[teraxlyst] respawn openPty failed:", e);
     return;
   }
   s.ptyOpening = false;

@@ -1,0 +1,44 @@
+name: Feature request
+description: Propose a new feature or improvement.
+title: "[feature] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Roadmap is in planning/ROADMAP.md. Check there first to see if this is already on the list.
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What you want to do
+      description: Describe the feature or change you'd like to see.
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: Why this matters
+      description: What problem does this solve? Who benefits?
+    validations:
+      required: true
+
+  - type: textarea
+    id: prior-art
+    attributes:
+      label: Any prior art
+      description: Links to other tools that do this well, relevant docs, or prior discussion.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: on-roadmap
+    attributes:
+      label: Is this on the existing roadmap?
+      options:
+        - Yes (which milestone?)
+        - "No"
+        - Not sure
+    validations:
+      required: true

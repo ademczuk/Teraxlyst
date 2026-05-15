@@ -2,6 +2,34 @@
 
 All notable changes to Teraxlyst. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/) (pre-`1.0`, minor bumps may include breaking changes).
 
+## [0.1.0-pre.3] - 2026-05-15
+
+M0 follow-up pass. Three parallel sub-agents covered the file-level rebrand surface.
+
+### Changed
+
+- **Frontend (14 files, 30 replacements).** User-visible "Terax" strings throughout the React app: dialog titles, placeholders, system prompts, console log tags, terminal hibernation overflow text, OpenRouter `X-Title` header, repo URLs, updater API endpoint, AboutSection bundle ID + display fields. Detail in `planning/M0_FRONTEND_SWEEP.md`. Build verified: `pnpm exec tsc --noEmit` clean, `pnpm build` succeeds in 10.6s.
+- **Backend (4 files, 6 replacements).** Safe Rust internal references: PTY thread names (`teraxlyst-pty-reader/flusher/waiter/drop-{id}`), backpressure marker bytes printed to terminal on overflow, and the atomic-write tmp filename suffix in `modules/fs/file.rs`. Detail in `planning/M0_BACKEND_SWEEP.md`.
+- **Icon set.** Generated a Teraxlyst icon via Gemini Nano Banana Pro (1024x1024 source preserved as `src-tauri/icons/teraxlyst-source.png`). Resized into the 14 PNG sizes Tauri expects (32x32, 64x64, 128x128, 128x128@2x, icon.png, and 9 Square*Logo / StoreLogo files for Windows Store builds). Generated `icon.ico` (6 resolutions) and `icon.icns` via Pillow. `public/logo.png` also replaced. Android and iOS subdirectories left for M0.1 since mobile is out of v1 scope.
+- **CI workflow.** New `.github/workflows/ci.yml`: minimal frontend type-check + build on push and pull_request to main. No Rust, no signing, no cross-platform builds yet.
+- **Issue and PR templates.** Rewrote `bug_report.yml`, `feature_request.yml`, `config.yml`, and `PULL_REQUEST_TEMPLATE.md` for Teraxlyst. Replaces the parked terax-ai versions.
+
+### Verified
+
+- `pnpm install --frozen-lockfile`: succeeded in 35s with current `pnpm-lock.yaml`.
+- `pnpm exec tsc --noEmit`: clean.
+- `pnpm build`: clean, 10.6s, full bundle output.
+- AI-marker scan on all 19 authored docs and template files: zero hits.
+
+### Deferred to M0.1 (deliberate, with reasons in the sweep reports)
+
+- **33 remaining `terax` occurrences in `src/`** across 20 files: localStorage keys (`terax-ui-theme-shadow`), tauri-plugin-store filenames (`terax-settings.json`, `terax-ai-{agents,sessions,snippets,todos}.json`), OS keychain service name (`KEYRING_SERVICE = "terax-ai"`), 7 Tauri event names paired with backend, CSS class `terax-collapsible-*`, and the `<terax-command>` wire format. All have either data-migration or paired-rename concerns. v0.2 needs a one-shot migration helper.
+- **81 remaining `terax` occurrences in `src-tauri/src/`**: shell-integration scripts and their env-var emit paths (`TERAX_USER_ZDOTDIR`, `TERAX_TERMINAL`, `_terax_precmd`, etc.), shell cache path `~/.cache/terax/shell-integration`, and the Tauri event names paired with frontend. All all-or-nothing changes that need lockstep coordination.
+- **Linux package install commands in `UpdaterDialog.tsx`** still reference `terax-bin` AUR, `Terax_*.deb`, `Terax-*.rpm`. Users on Linux who hit the manual-update path will see broken install commands until packaging exists.
+- **`https://terax.app` website URL** in `AboutSection.tsx` and OpenRouter `HTTP-Referer` in `agent.ts` still point upstream. Need a fork domain decision.
+- **Mobile icon assets** in `src-tauri/icons/android/` and `src-tauri/icons/ios/` untouched (mobile out of v1 scope).
+- **macOS notarization, Windows code signing, .icns refinement via `iconutil`**: M6.
+
 ## [0.1.0-pre.2] - 2026-05-15
 
 Hardening pass after self-review.

@@ -43,7 +43,7 @@ Teraxlyst targets users who want nimbalyst's session-management and tracker work
 | Milestone | Status |
 |-----------|--------|
 | Planning docs | done |
-| M0 fork + rebrand | partial (file-level fork done, build not yet verified) |
+| M0 fork + rebrand | substantially done (frontend type-checks + builds; Rust toolchain verification pending) |
 | M1 persistence | not started |
 | M2 multi-session manager | not started |
 | M3 MCP host | not started |

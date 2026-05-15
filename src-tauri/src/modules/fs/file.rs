@@ -93,7 +93,7 @@ pub fn fs_write_file(
         .and_then(|s| s.to_str())
         .ok_or_else(|| "path has no file name".to_string())?;
 
-    let tmp = parent.join(format!(".{file_name}.terax.tmp"));
+    let tmp = parent.join(format!(".{file_name}.teraxlyst.tmp"));
 
     {
         let mut f = std::fs::File::create(&tmp).map_err(|e| {

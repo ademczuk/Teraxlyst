@@ -194,7 +194,7 @@ export function AiInputBar() {
                     c.submit();
                   }
                 }}
-                placeholder="Ask Terax anything   -   # for snippets and commands"
+                placeholder="Ask Teraxlyst anything   -   # for snippets and commands"
                 rows={1}
                 disabled={c.isBusy}
                 className={cn(

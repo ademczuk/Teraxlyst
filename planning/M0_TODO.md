@@ -2,10 +2,17 @@
 
 Tracks rebrand work that did NOT land in the initial fork commit. Items are deliberate deferrals - low risk to leave, high risk to change blindly.
 
-Status as of 2026-05-15:
+Status as of 2026-05-15 (after 0.1.0-pre.3):
+
 - Initial fork landed with package/binary names rebranded.
-- Self-review pass fixed: LICENSE attribution, CODEOWNERS, governance docs, CI workflows disabled, terax-ai screenshots removed. See CHANGELOG.md 0.1.0-pre.2.
-- Remaining work is queued for M0.1.
+- Self-review pass fixed: LICENSE attribution, CODEOWNERS, governance docs, CI workflows disabled, terax-ai screenshots removed.
+- Brand sweep pass landed:
+  - Frontend: 30 user-visible string replacements in 14 src/ files. `pnpm build` clean.
+  - Backend: 6 safe internal references migrated (PTY thread names, backpressure marker, tmp filename).
+  - Icons: Teraxlyst icon generated and applied to 14 PNG sizes plus .ico and .icns.
+  - New CI workflow + issue/PR templates written.
+  - See `planning/M0_FRONTEND_SWEEP.md` and `planning/M0_BACKEND_SWEEP.md` for detail.
+- Remaining work is `pnpm tauri dev` verification (needs Rust installed locally) plus the deferred M0.1 punch list below. Data-migration items in particular block v0.2, not v0.1.
 
 ## Critical (block M2 or M3)
 

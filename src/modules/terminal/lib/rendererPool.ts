@@ -66,7 +66,7 @@ export function poolSize(): number {
 function getRecycler(): HTMLDivElement {
   if (recyclerEl && recyclerEl.isConnected) return recyclerEl;
   const el = document.createElement("div");
-  el.setAttribute("data-terax-recycler", "");
+  el.setAttribute("data-teraxlyst-recycler", "");
   el.style.cssText =
     "position:fixed;left:-99999px;top:-99999px;width:1024px;height:768px;overflow:hidden;pointer-events:none;contain:strict;";
   document.body.appendChild(el);
@@ -102,7 +102,7 @@ function createSlot(): Slot {
 
   const host = document.createElement("div");
   host.style.cssText = "width:100%;height:100%;";
-  host.setAttribute("data-terax-slot", String(slots.length));
+  host.setAttribute("data-teraxlyst-slot", String(slots.length));
   getRecycler().appendChild(host);
   term.open(host);
 
@@ -244,7 +244,7 @@ function bindSlot(slot: Slot, p: AcquireParams): void {
     try {
       slot.term.write(p.snapshot);
     } catch (e) {
-      console.warn("[terax] snapshot replay failed:", e);
+      console.warn("[teraxlyst] snapshot replay failed:", e);
     }
   }
   p.drainRing((bytes) => slot.term.write(bytes));
@@ -375,7 +375,7 @@ function serializeSlot(slot: Slot): SerializeOutput {
     );
     snapshot = slot.serializeAddon.serialize({ scrollback: cap });
   } catch (e) {
-    console.warn("[terax] serialize failed:", e);
+    console.warn("[teraxlyst] serialize failed:", e);
   }
   return { snapshot, cols: slot.term.cols, rows: slot.term.rows };
 }
@@ -442,7 +442,7 @@ function attachWebgl(slot: Slot): void {
     slot.webglAddon = webgl;
     slot.webglCanvases = added;
   } catch (e) {
-    console.warn("[terax-webgl] unavailable:", e);
+    console.warn("[teraxlyst-webgl] unavailable:", e);
   }
 }
 
@@ -454,7 +454,7 @@ function disposeSlotWebgl(slot: Slot): void {
   try {
     addon.dispose();
   } catch (e) {
-    console.warn("[terax-webgl] dispose failed:", e);
+    console.warn("[teraxlyst-webgl] dispose failed:", e);
   }
   try {
     const r = (

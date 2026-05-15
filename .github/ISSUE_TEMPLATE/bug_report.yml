@@ -1,0 +1,64 @@
+name: Bug report
+description: Report something that's broken in Teraxlyst.
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Teraxlyst is in early planning. Bugs are welcome but expect rough edges.
+
+  - type: textarea
+    id: whats-broken
+    attributes:
+      label: What's broken
+      description: Describe the bug in plain terms.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps that trigger the bug.
+      placeholder: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Teraxlyst version + commit hash
+      description: Run `git rev-parse --short HEAD` if you built from source.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: OS
+      options:
+        - Windows
+        - macOS
+        - Linux
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected to happen
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      description: Paste relevant logs, stack traces, or attach screenshots.
+    validations:
+      required: false

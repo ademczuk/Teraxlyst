@@ -92,12 +92,12 @@ export function UpdaterDialog() {
               : downloading
                 ? "Downloading update…"
                 : manual
-                  ? `Terax v${manual.version} is available`
-                  : `Terax v${update?.version} is available`}
+                  ? `Teraxlyst v${manual.version} is available`
+                  : `Teraxlyst v${update?.version} is available`}
           </DialogTitle>
           <DialogDescription>
             {ready
-              ? "Restart Terax to finish installing."
+              ? "Restart Teraxlyst to finish installing."
               : downloading
                 ? progress !== null
                   ? `${progress.toFixed(0)}% — ${formatBytes(status.downloaded)}`
