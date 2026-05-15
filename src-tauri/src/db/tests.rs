@@ -145,11 +145,11 @@ async fn migrations_idempotent_on_reopen() {
     {
         let mut c = Connection::open(&path).unwrap();
         let v = run_migrations(&mut c).unwrap();
-        assert_eq!(v, 1);
+        assert_eq!(v, 2);
     }
     {
         let mut c = Connection::open(&path).unwrap();
         let v = run_migrations(&mut c).unwrap();
-        assert_eq!(v, 1, "second run must report current version, not re-apply");
+        assert_eq!(v, 2, "second run must report current version, not re-apply");
     }
 }
