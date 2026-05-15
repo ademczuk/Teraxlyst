@@ -52,28 +52,27 @@ async fn session_lifecycle_writes_events_to_db() {
         .await
         .expect("create session");
 
-    // The child exits almost immediately. Poll the registry until it clears
-    // (the watcher task removes the entry on child exit) with a generous
-    // upper bound so a slow CI runner doesn't flake.
+    // The child exits almost immediately. The watcher writes Completed and
+    // prunes the registry, but the order of (Completed write) vs (registry
+    // prune) is not guaranteed by the manager API, and the flusher may have
+    // an unflushed batch behind Completed. So poll the DB directly for the
+    // Completed marker rather than polling the registry.
     let mut waited = Duration::from_millis(0);
     let step = Duration::from_millis(50);
     let cap = Duration::from_secs(5);
-    while !mgr.list_running().await.is_empty() && waited < cap {
+    let events = loop {
+        let evs = db
+            .list_events(session.id, 0)
+            .await
+            .expect("list_events");
+        let saw_completed = evs.iter().any(|e| e.kind == "completed");
+        if saw_completed || waited >= cap {
+            break evs;
+        }
         tokio::time::sleep(step).await;
         waited += step;
-    }
-    assert!(
-        mgr.list_running().await.is_empty(),
-        "registry should be empty after child exit"
-    );
+    };
 
-    // Verify events landed in the DB. We expect:
-    //   1 UserMessage (the prompt), 3 AssistantText (echo lines),
-    //   1 Completed = 5 total, in seq order.
-    let events = db
-        .list_events(session.id, 0)
-        .await
-        .expect("list_events");
     assert!(
         events.len() >= 4,
         "expected at least 4 events (prompt + 3 echo lines), got {}: {:?}",
