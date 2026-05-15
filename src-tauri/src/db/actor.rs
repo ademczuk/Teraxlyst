@@ -985,8 +985,9 @@ fn handle_list_tracker_items(
                  WHERE tracker_id = ?1 AND status = ?2 \
                  ORDER BY created_at ASC",
             )?;
-            stmt.query_map(params![tracker_id, filter], map_row)?
-                .collect::<Result<Vec<_>, _>>()?
+            let iter = stmt.query_map(params![tracker_id, filter], map_row)?;
+            let out: Result<Vec<_>, _> = iter.collect();
+            out?
         }
         None => {
             let mut stmt = conn.prepare(
@@ -995,8 +996,9 @@ fn handle_list_tracker_items(
                  WHERE tracker_id = ?1 \
                  ORDER BY created_at ASC",
             )?;
-            stmt.query_map(params![tracker_id], map_row)?
-                .collect::<Result<Vec<_>, _>>()?
+            let iter = stmt.query_map(params![tracker_id], map_row)?;
+            let out: Result<Vec<_>, _> = iter.collect();
+            out?
         }
     };
     Ok(rows)

@@ -23,6 +23,4 @@ pub mod types;
 #[cfg(test)]
 mod tests;
 
-pub use diff_pipeline::PendingDiffs;
-pub use prompt_pipeline::PendingPrompts;
-pub use server::{spawn_in_process, McpHandle, McpToolset};
+pub use server::spawn_in_process;

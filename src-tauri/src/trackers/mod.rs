@@ -27,5 +27,5 @@ pub mod validate;
 #[cfg(test)]
 mod tests;
 
-pub use error::TrackerError;
-pub use schema::{FieldDef, FieldType, IdFormat, TrackerDef};
+// Re-exports trimmed to satisfy clippy -D warnings; modules accessed via
+// path (e.g. trackers::schema::TrackerDef) where needed.
