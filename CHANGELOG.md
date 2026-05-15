@@ -2,6 +2,38 @@
 
 All notable changes to Teraxlyst. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/) (pre-`1.0`, minor bumps may include breaking changes).
 
+## [0.1.0-pre.5] - 2026-05-15
+
+M1 milestone: native SQLite persistence layer landed and validated in CI.
+
+### Added
+
+- `src-tauri/src/db/` (8 files, 1065 LOC): rusqlite DbActor + 6-table schema + versioned migrations + 8 Tauri commands + 4 integration tests. Single-writer actor pattern (one `Connection` lives in a `tokio::task::spawn_blocking` thread, all requests serialized through an `mpsc::Receiver<DbRequest>`). WAL mode, `foreign_keys=ON`, `synchronous=NORMAL`. See `planning/M1_IMPLEMENTATION.md`.
+- New Tauri commands: `db_create_workspace`, `db_list_workspaces`, `db_create_session`, `db_append_event`, `db_list_events`, `db_create_diff_proposal`, `db_resolve_diff_proposal`, `db_list_pending_proposals`.
+- Schema: `workspaces`, `sessions`, `session_events`, `trackers`, `tracker_items`, `diff_proposals` + 3 indexes. Tracker tables exist but CRUD handlers are M4 scope.
+- `Cargo.toml` deps: `rusqlite 0.31` (bundled + serde_json), `tokio 1` (rt-multi-thread + macros + sync + fs), `thiserror 1`, `ulid 1`. Dev-deps: `tempfile 3`, `tokio` test-util.
+- `lib.rs` setup closure: resolves `<app_data_dir>/teraxlyst.sqlite`, creates the dir if missing, runs migrations, spawns the DbActor, stores the `DbHandle` in `app.manage()`.
+
+### CI
+
+- Added `cargo test --lib` to the Rust job. The 1000-event concurrent integration test, the migration idempotency test, the diff proposal round-trip test, and the workspace list test all execute on every push. 4 tests, 4 passed in 0.10s. Total Rust job time: 2m37s.
+
+### Verified
+
+- `cargo check --all-targets`: clean.
+- `cargo clippy --all-targets -- -D warnings`: clean.
+- `cargo test --lib`: 4/4 passed.
+- Frontend `pnpm exec tsc --noEmit` + `pnpm build`: clean.
+- AI-marker scan on M1 deliverables: zero hits.
+
+### Deliberate v1.1 cuts (per `planning/M1_IMPLEMENTATION.md`)
+
+- Single writer connection, no reader pool. Trivially additive.
+- No FTS5 on `session_events.payload`. Will land with search UI post-M2.
+- No batched event insert. M2 SessionManager will add `AppendEventsBatch` to address the write-amplification risk flagged in ROADMAP M1.
+- No tracker CRUD. Schema includes the tables; handlers land in M4.
+- `ulid` dep present but unused. Reserved for stable external session IDs once exposed over MCP.
+
 ## [0.1.0-pre.4] - 2026-05-15
 
 M0 closeout pass. The deferred-by-design lockstep renames are now done. Two parallel sub-agents covered the persistence layer and the shell-integration scripts; the remaining items were handled inline.

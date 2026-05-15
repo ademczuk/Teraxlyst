@@ -44,7 +44,7 @@ Teraxlyst targets users who want nimbalyst's session-management and tracker work
 |-----------|--------|
 | Planning docs | done |
 | M0 fork + rebrand | done (frontend builds locally; Rust check runs in CI on Linux) |
-| M1 persistence | not started |
+| M1 persistence | done (DbActor + 6 tables + 8 commands + 4 integration tests pass on Linux CI) |
 | M2 multi-session manager | not started |
 | M3 MCP host | not started |
 | M4 trackers | not started |
