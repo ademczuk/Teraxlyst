@@ -1,0 +1,78 @@
+// MCP server bootstrap.
+//
+// Two responsibilities:
+//   1. Build the `TeraxlystToolset` and the two pipelines (PendingPrompts,
+//      PendingDiffs) wired to the live Tauri AppHandle.
+//   2. Optionally serve the toolset over rmcp's stdio transport (for the
+//      case where an external CLI agent attaches to Teraxlyst as an MCP
+//      client). In production-default mode we only build the toolset and
+//      stash it in Tauri state; the renderer-side commands then drive it
+//      directly without going through the wire transport.
+//
+// In-process AI sessions (M2/M4) will eventually wire to the toolset
+// through a memory transport. We keep the surface narrow for M3.
+
+use std::sync::Arc;
+
+use tauri::{AppHandle, Manager, Runtime};
+
+use crate::db::actor::DbHandle;
+
+use super::diff_pipeline::{PendingDiffs, TauriDiffEmitter};
+use super::error::McpError;
+use super::prompt_pipeline::{PendingPrompts, TauriPromptEmitter};
+use super::tools::TeraxlystToolset;
+
+// Convenient bundle stashed in Tauri state.
+#[derive(Clone)]
+pub struct McpHandle {
+    pub toolset: Arc<TeraxlystToolset>,
+    pub prompts: PendingPrompts,
+    pub diffs: PendingDiffs,
+}
+
+// Re-export `McpToolset` as an alias so external callers can name it.
+pub type McpToolset = Arc<TeraxlystToolset>;
+
+// Build the in-process toolset, wire emitters to the live AppHandle, and
+// register everything in Tauri state.
+pub fn spawn_in_process<R: Runtime>(
+    app: &AppHandle<R>,
+    db: DbHandle,
+) -> Result<McpHandle, McpError> {
+    let prompt_emitter = Arc::new(TauriPromptEmitter::new(app.clone()));
+    let diff_emitter = Arc::new(TauriDiffEmitter::new(app.clone()));
+
+    let prompts = PendingPrompts::new(prompt_emitter);
+    let diffs = PendingDiffs::new(diff_emitter, db);
+
+    let toolset = Arc::new(TeraxlystToolset::new(prompts.clone(), diffs.clone()));
+
+    let handle = McpHandle {
+        toolset,
+        prompts,
+        diffs,
+    };
+    app.manage(handle.clone());
+    Ok(handle)
+}
+
+// Optional: serve the toolset over rmcp stdio. Spawned as a tokio task.
+//
+// NOTE: The toolset implements `rmcp::handler::server::router::tool::ToolRouter`
+// via the #[tool_router] macro on `tools.rs`. The exact wiring to
+// `serve_server` may need adjustment against rmcp 1.7's actual macro
+// surface; this is gated behind a feature so the build doesn't break when
+// the bridge isn't required. M3.1 will productionize this path.
+#[cfg(feature = "mcp-stdio")]
+pub fn spawn_stdio_server(handle: McpHandle) -> tokio::task::JoinHandle<()> {
+    tokio::spawn(async move {
+        let toolset = (*handle.toolset).clone();
+        // The exact API call is `serve_server(handler, stdio())` per rmcp's
+        // README, but the handler must implement ServerHandler. The
+        // tool_router macro generates that impl when invoked with
+        // server_handler. See planning/M3_IMPLEMENTATION.md.
+        let _ = toolset;
+        // Placeholder until M3.1 ships the proper wiring.
+    })
+}

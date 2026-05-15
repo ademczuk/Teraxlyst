@@ -72,9 +72,10 @@ pub async fn db_create_diff_proposal(
     file_path: String,
     base_hash: Option<String>,
     patch: String,
+    new_content: Option<String>,
 ) -> Result<DiffProposal, String> {
     handle
-        .create_diff_proposal(session_id, file_path, base_hash, patch)
+        .create_diff_proposal(session_id, file_path, base_hash, patch, new_content)
         .await
         .map_err(|e| e.to_string())
 }

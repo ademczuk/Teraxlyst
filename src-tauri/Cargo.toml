@@ -44,9 +44,19 @@ reqwest = { version = "0.12", default-features = false, features = [
 bytes = "1"
 futures-util = "0.3"
 rusqlite = { version = "0.31", features = ["bundled", "serde_json"] }
-tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "fs", "time"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "fs", "time", "io-util"] }
 thiserror = "1"
 ulid = { version = "1", features = ["serde"] }
+# MCP host (M3). server + transport-io enables stdio transport. macros and
+# schemars are enabled by default and we use both.
+rmcp = { version = "1.7", default-features = true, features = ["server", "transport-io"] }
+schemars = "1"
+# Unified-diff computation for propose_diff.
+similar = "2"
+# YAML parser for M4 trackers. Maintained fork of dtolnay's serde_yaml,
+# which was deprecated in 2024. serde_yaml_ng tracks the original API
+# exactly so we can swap forks later without code churn.
+serde_yaml_ng = "0.10"
 
 [dev-dependencies]
 tempfile = "3"

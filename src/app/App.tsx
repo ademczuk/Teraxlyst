@@ -41,6 +41,9 @@ import {
   type SearchInlineHandle,
   type SearchTarget,
 } from "@/modules/header";
+// TODO(M5.1): wire DiffInbox into a panel/route. Import removed to satisfy
+// tsc --noEmit; module exports remain reachable from elsewhere.
+// import { DiffInbox } from "@/modules/diff";
 import { PreviewStack, type PreviewPaneHandle } from "@/modules/preview";
 import { SessionList } from "@/modules/sessions";
 import { openSettingsWindow } from "@/modules/settings/openSettingsWindow";
@@ -61,6 +64,7 @@ import {
   TerminalStack,
   type TerminalPaneHandle,
 } from "@/modules/terminal";
+import { PromptForUserInputDialog } from "@/modules/mcp";
 import { ThemeProvider } from "@/modules/theme";
 import { UpdaterDialog } from "@/modules/updater";
 import {
@@ -968,6 +972,7 @@ export default function App() {
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+          <PromptForUserInputDialog />
         </div>
       </TooltipProvider>
     </ThemeProvider>

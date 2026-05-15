@@ -104,6 +104,9 @@ async fn diff_proposal_create_resolve() {
             "src/lib.rs".to_string(),
             Some("abc123".to_string()),
             "@@ -1,1 +1,1 @@\n-old\n+new\n".to_string(),
+            // M5: legacy-shape test keeps new_content None to verify the
+            // create path still accepts a row without a stashed payload.
+            None,
         )
         .await
         .unwrap();

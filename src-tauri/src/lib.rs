@@ -1,6 +1,9 @@
 mod db;
+mod diff;
+mod mcp;
 mod modules;
 mod sessions;
+mod trackers;
 
 use modules::{fs, net, pty, secrets, shell, workspace};
 use tauri::{Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
@@ -93,11 +96,15 @@ pub fn run() {
             let app_data_dir = app.path().app_data_dir()?;
             std::fs::create_dir_all(&app_data_dir)?;
             let db_path = app_data_dir.join("teraxlyst.sqlite");
-            let handle = db::spawn_at_path(&db_path)?;
-            app.manage(handle);
+            let db_handle = db::spawn_at_path(&db_path)?;
+            app.manage(db_handle.clone());
             // Session manager: in-memory registry of running AI sessions.
             // No persistent state, so just install a fresh default.
             app.manage(sessions::SessionManager::new());
+            // MCP host: builds the toolset + pending pipelines and stashes
+            // them as `McpHandle` in Tauri state so the renderer commands
+            // and any in-process agent loop can dispatch.
+            mcp::spawn_in_process(app.handle(), db_handle)?;
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -144,9 +151,13 @@ pub fn run() {
             db::commands::db_create_diff_proposal,
             db::commands::db_resolve_diff_proposal,
             db::commands::db_list_pending_proposals,
+            diff::commands::diff_apply_and_resolve,
             sessions::commands::session_create,
             sessions::commands::session_kill,
             sessions::commands::session_list_running,
+            mcp::commands::mcp_prompt_response,
+            mcp::commands::mcp_diff_resolve,
+            mcp::commands::mcp_list_pending_prompts,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

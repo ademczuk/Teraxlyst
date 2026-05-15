@@ -17,7 +17,8 @@ use rusqlite::Connection;
 use super::error::DbError;
 
 const SCHEMA_V1: &str = include_str!("schema.sql");
-const LATEST_VERSION: u32 = 1;
+const SCHEMA_V2: &str = include_str!("schema_v2.sql");
+const LATEST_VERSION: u32 = 2;
 
 pub fn apply_connection_pragmas(conn: &Connection) -> Result<(), DbError> {
     // foreign_keys is per-connection in SQLite; the actor must re-apply.
@@ -69,6 +70,18 @@ pub fn run_migrations(conn: &mut Connection) -> Result<u32, DbError> {
                 tx.execute(
                     "INSERT INTO schema_version (version, applied_at) VALUES (?1, ?2)",
                     rusqlite::params![1_i64, now],
+                )?;
+            }
+            2 => {
+                // Adds new_content column to diff_proposals (M5). Idempotent
+                // by virtue of LATEST_VERSION gating; ALTER TABLE ADD COLUMN
+                // itself is not idempotent in SQLite, but the runner only
+                // invokes this branch when current_version < 2.
+                tx.execute_batch(SCHEMA_V2)?;
+                let now = now_millis();
+                tx.execute(
+                    "INSERT INTO schema_version (version, applied_at) VALUES (?1, ?2)",
+                    rusqlite::params![2_i64, now],
                 )?;
             }
             other => {

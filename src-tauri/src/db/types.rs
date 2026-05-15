@@ -64,4 +64,9 @@ pub struct DiffProposal {
     pub status: String,
     pub created_at: i64,
     pub resolved_at: Option<i64>,
+    // M5: the final file content the agent proposes. Populated by M3's
+    // propose_diff tool. Legacy rows (pre-v2 migration) carry None and
+    // cannot be applied via diff_apply_and_resolve.
+    #[serde(default)]
+    pub new_content: Option<String>,
 }

@@ -55,6 +55,7 @@ pub enum DbRequest {
         file_path: String,
         base_hash: Option<String>,
         patch: String,
+        new_content: Option<String>,
         reply: Reply<DiffProposal>,
     },
     ResolveDiffProposal {
@@ -65,6 +66,53 @@ pub enum DbRequest {
     ListPendingProposals {
         session_id: Option<i64>,
         reply: Reply<Vec<DiffProposal>>,
+    },
+    GetDiffProposal {
+        id: i64,
+        reply: Reply<DiffProposal>,
+    },
+    // M4: tracker CRUD. Additive only; existing variants are unchanged.
+    UpsertTracker {
+        workspace_id: i64,
+        name: String,
+        yaml_source: String,
+        schema_json: String,
+        reply: Reply<Tracker>,
+    },
+    ListTrackers {
+        workspace_id: i64,
+        reply: Reply<Vec<Tracker>>,
+    },
+    GetTrackerByName {
+        workspace_id: i64,
+        name: String,
+        reply: Reply<Option<Tracker>>,
+    },
+    CreateTrackerItem {
+        tracker_id: i64,
+        public_id: String,
+        status: Option<String>,
+        fields_json: String,
+        reply: Reply<TrackerItem>,
+    },
+    UpdateTrackerItem {
+        id: i64,
+        status: Option<String>,
+        fields_json: String,
+        reply: Reply<TrackerItem>,
+    },
+    ListTrackerItems {
+        tracker_id: i64,
+        status_filter: Option<String>,
+        reply: Reply<Vec<TrackerItem>>,
+    },
+    ListTrackerItemIds {
+        tracker_id: i64,
+        reply: Reply<Vec<String>>,
+    },
+    GetTrackerById {
+        tracker_id: i64,
+        reply: Reply<Option<Tracker>>,
     },
 }
 
@@ -145,6 +193,7 @@ impl DbHandle {
         file_path: String,
         base_hash: Option<String>,
         patch: String,
+        new_content: Option<String>,
     ) -> Result<DiffProposal, DbError> {
         let (reply, rx) = oneshot::channel();
         self.send(DbRequest::CreateDiffProposal {
@@ -152,9 +201,16 @@ impl DbHandle {
             file_path,
             base_hash,
             patch,
+            new_content,
             reply,
         })
         .await?;
+        rx.await.map_err(|_| DbError::ActorClosed)?
+    }
+
+    pub async fn get_diff_proposal(&self, id: i64) -> Result<DiffProposal, DbError> {
+        let (reply, rx) = oneshot::channel();
+        self.send(DbRequest::GetDiffProposal { id, reply }).await?;
         rx.await.map_err(|_| DbError::ActorClosed)?
     }
 
@@ -174,6 +230,117 @@ impl DbHandle {
     ) -> Result<Vec<DiffProposal>, DbError> {
         let (reply, rx) = oneshot::channel();
         self.send(DbRequest::ListPendingProposals { session_id, reply }).await?;
+        rx.await.map_err(|_| DbError::ActorClosed)?
+    }
+
+    // ---- M4: tracker CRUD ----
+
+    pub async fn upsert_tracker(
+        &self,
+        workspace_id: i64,
+        name: String,
+        yaml_source: String,
+        schema_json: String,
+    ) -> Result<Tracker, DbError> {
+        let (reply, rx) = oneshot::channel();
+        self.send(DbRequest::UpsertTracker {
+            workspace_id,
+            name,
+            yaml_source,
+            schema_json,
+            reply,
+        })
+        .await?;
+        rx.await.map_err(|_| DbError::ActorClosed)?
+    }
+
+    pub async fn list_trackers(&self, workspace_id: i64) -> Result<Vec<Tracker>, DbError> {
+        let (reply, rx) = oneshot::channel();
+        self.send(DbRequest::ListTrackers { workspace_id, reply }).await?;
+        rx.await.map_err(|_| DbError::ActorClosed)?
+    }
+
+    pub async fn get_tracker_by_name(
+        &self,
+        workspace_id: i64,
+        name: String,
+    ) -> Result<Option<Tracker>, DbError> {
+        let (reply, rx) = oneshot::channel();
+        self.send(DbRequest::GetTrackerByName {
+            workspace_id,
+            name,
+            reply,
+        })
+        .await?;
+        rx.await.map_err(|_| DbError::ActorClosed)?
+    }
+
+    pub async fn create_tracker_item(
+        &self,
+        tracker_id: i64,
+        public_id: String,
+        status: Option<String>,
+        fields_json: String,
+    ) -> Result<TrackerItem, DbError> {
+        let (reply, rx) = oneshot::channel();
+        self.send(DbRequest::CreateTrackerItem {
+            tracker_id,
+            public_id,
+            status,
+            fields_json,
+            reply,
+        })
+        .await?;
+        rx.await.map_err(|_| DbError::ActorClosed)?
+    }
+
+    pub async fn update_tracker_item(
+        &self,
+        id: i64,
+        status: Option<String>,
+        fields_json: String,
+    ) -> Result<TrackerItem, DbError> {
+        let (reply, rx) = oneshot::channel();
+        self.send(DbRequest::UpdateTrackerItem {
+            id,
+            status,
+            fields_json,
+            reply,
+        })
+        .await?;
+        rx.await.map_err(|_| DbError::ActorClosed)?
+    }
+
+    pub async fn list_tracker_items(
+        &self,
+        tracker_id: i64,
+        status_filter: Option<String>,
+    ) -> Result<Vec<TrackerItem>, DbError> {
+        let (reply, rx) = oneshot::channel();
+        self.send(DbRequest::ListTrackerItems {
+            tracker_id,
+            status_filter,
+            reply,
+        })
+        .await?;
+        rx.await.map_err(|_| DbError::ActorClosed)?
+    }
+
+    pub async fn list_tracker_item_ids(
+        &self,
+        tracker_id: i64,
+    ) -> Result<Vec<String>, DbError> {
+        let (reply, rx) = oneshot::channel();
+        self.send(DbRequest::ListTrackerItemIds { tracker_id, reply }).await?;
+        rx.await.map_err(|_| DbError::ActorClosed)?
+    }
+
+    pub async fn get_tracker_by_id(
+        &self,
+        tracker_id: i64,
+    ) -> Result<Option<Tracker>, DbError> {
+        let (reply, rx) = oneshot::channel();
+        self.send(DbRequest::GetTrackerById { tracker_id, reply }).await?;
         rx.await.map_err(|_| DbError::ActorClosed)?
     }
 
@@ -257,6 +424,7 @@ fn run_actor(mut conn: Connection, mut rx: mpsc::Receiver<DbRequest>) {
                 file_path,
                 base_hash,
                 patch,
+                new_content,
                 reply,
             } => {
                 let _ = reply.send(handle_create_diff_proposal(
@@ -265,6 +433,7 @@ fn run_actor(mut conn: Connection, mut rx: mpsc::Receiver<DbRequest>) {
                     &file_path,
                     base_hash.as_deref(),
                     &patch,
+                    new_content.as_deref(),
                 ));
             }
             DbRequest::ResolveDiffProposal { id, action, reply } => {
@@ -272,6 +441,83 @@ fn run_actor(mut conn: Connection, mut rx: mpsc::Receiver<DbRequest>) {
             }
             DbRequest::ListPendingProposals { session_id, reply } => {
                 let _ = reply.send(handle_list_pending_proposals(&conn, session_id));
+            }
+            DbRequest::GetDiffProposal { id, reply } => {
+                let _ = reply.send(handle_get_diff_proposal(&conn, id));
+            }
+            // ---- M4 ----
+            DbRequest::UpsertTracker {
+                workspace_id,
+                name,
+                yaml_source,
+                schema_json,
+                reply,
+            } => {
+                let _ = reply.send(handle_upsert_tracker(
+                    &conn,
+                    workspace_id,
+                    &name,
+                    &yaml_source,
+                    &schema_json,
+                ));
+            }
+            DbRequest::ListTrackers {
+                workspace_id,
+                reply,
+            } => {
+                let _ = reply.send(handle_list_trackers(&conn, workspace_id));
+            }
+            DbRequest::GetTrackerByName {
+                workspace_id,
+                name,
+                reply,
+            } => {
+                let _ = reply.send(handle_get_tracker_by_name(&conn, workspace_id, &name));
+            }
+            DbRequest::CreateTrackerItem {
+                tracker_id,
+                public_id,
+                status,
+                fields_json,
+                reply,
+            } => {
+                let _ = reply.send(handle_create_tracker_item(
+                    &conn,
+                    tracker_id,
+                    &public_id,
+                    status.as_deref(),
+                    &fields_json,
+                ));
+            }
+            DbRequest::UpdateTrackerItem {
+                id,
+                status,
+                fields_json,
+                reply,
+            } => {
+                let _ = reply.send(handle_update_tracker_item(
+                    &conn,
+                    id,
+                    status.as_deref(),
+                    &fields_json,
+                ));
+            }
+            DbRequest::ListTrackerItems {
+                tracker_id,
+                status_filter,
+                reply,
+            } => {
+                let _ = reply.send(handle_list_tracker_items(
+                    &conn,
+                    tracker_id,
+                    status_filter.as_deref(),
+                ));
+            }
+            DbRequest::ListTrackerItemIds { tracker_id, reply } => {
+                let _ = reply.send(handle_list_tracker_item_ids(&conn, tracker_id));
+            }
+            DbRequest::GetTrackerById { tracker_id, reply } => {
+                let _ = reply.send(handle_get_tracker_by_id(&conn, tracker_id));
             }
         }
     }
@@ -420,13 +666,14 @@ fn handle_create_diff_proposal(
     file_path: &str,
     base_hash: Option<&str>,
     patch: &str,
+    new_content: Option<&str>,
 ) -> Result<DiffProposal, DbError> {
     let now = now_millis();
     let status = "pending";
     conn.execute(
-        "INSERT INTO diff_proposals (session_id, file_path, base_hash, patch, status, created_at, resolved_at) \
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, NULL)",
-        params![session_id, file_path, base_hash, patch, status, now],
+        "INSERT INTO diff_proposals (session_id, file_path, base_hash, patch, status, created_at, resolved_at, new_content) \
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, NULL, ?7)",
+        params![session_id, file_path, base_hash, patch, status, now, new_content],
     )?;
     let id = conn.last_insert_rowid();
     Ok(DiffProposal {
@@ -438,7 +685,32 @@ fn handle_create_diff_proposal(
         status: status.to_string(),
         created_at: now,
         resolved_at: None,
+        new_content: new_content.map(|s| s.to_string()),
     })
+}
+
+fn handle_get_diff_proposal(conn: &Connection, id: i64) -> Result<DiffProposal, DbError> {
+    let row = conn
+        .query_row(
+            "SELECT id, session_id, file_path, base_hash, patch, status, created_at, resolved_at, new_content \
+             FROM diff_proposals WHERE id = ?1",
+            params![id],
+            |row| {
+                Ok(DiffProposal {
+                    id: row.get(0)?,
+                    session_id: row.get(1)?,
+                    file_path: row.get(2)?,
+                    base_hash: row.get(3)?,
+                    patch: row.get(4)?,
+                    status: row.get(5)?,
+                    created_at: row.get(6)?,
+                    resolved_at: row.get(7)?,
+                    new_content: row.get(8)?,
+                })
+            },
+        )
+        .optional()?;
+    row.ok_or_else(|| DbError::NotFound(format!("diff_proposal {} not found", id)))
 }
 
 fn handle_resolve_diff_proposal(
@@ -470,7 +742,7 @@ fn handle_resolve_diff_proposal(
     }
     let row = conn
         .query_row(
-            "SELECT id, session_id, file_path, base_hash, patch, status, created_at, resolved_at \
+            "SELECT id, session_id, file_path, base_hash, patch, status, created_at, resolved_at, new_content \
              FROM diff_proposals WHERE id = ?1",
             params![id],
             |row| {
@@ -483,6 +755,7 @@ fn handle_resolve_diff_proposal(
                     status: row.get(5)?,
                     created_at: row.get(6)?,
                     resolved_at: row.get(7)?,
+                    new_content: row.get(8)?,
                 })
             },
         )
@@ -496,13 +769,13 @@ fn handle_list_pending_proposals(
 ) -> Result<Vec<DiffProposal>, DbError> {
     let query = match session_id {
         Some(_) => {
-            "SELECT id, session_id, file_path, base_hash, patch, status, created_at, resolved_at \
+            "SELECT id, session_id, file_path, base_hash, patch, status, created_at, resolved_at, new_content \
              FROM diff_proposals \
              WHERE status = 'pending' AND session_id = ?1 \
              ORDER BY created_at ASC"
         }
         None => {
-            "SELECT id, session_id, file_path, base_hash, patch, status, created_at, resolved_at \
+            "SELECT id, session_id, file_path, base_hash, patch, status, created_at, resolved_at, new_content \
              FROM diff_proposals \
              WHERE status = 'pending' \
              ORDER BY created_at ASC"
@@ -519,6 +792,7 @@ fn handle_list_pending_proposals(
             status: row.get(5)?,
             created_at: row.get(6)?,
             resolved_at: row.get(7)?,
+            new_content: row.get(8)?,
         })
     };
     let rows = if let Some(sid) = session_id {
@@ -530,9 +804,238 @@ fn handle_list_pending_proposals(
     Ok(rows)
 }
 
-// Silence dead-code warnings for types we ship but don't yet use in v1.
-// Trackers + TrackerItems are part of the schema (M4) but aren't surfaced
-// via DbRequest variants in M1; keeping them in types.rs documents the
-// shape we'll consume in M4.
-#[allow(dead_code)]
-fn _ensure_unused_types_compile(_: Tracker, _: TrackerItem) {}
+// ---- M4 tracker handlers ----
+
+fn handle_upsert_tracker(
+    conn: &Connection,
+    workspace_id: i64,
+    name: &str,
+    yaml_source: &str,
+    schema_json: &str,
+) -> Result<Tracker, DbError> {
+    // INSERT ... ON CONFLICT(workspace_id, name) updates the yaml_source +
+    // schema_json in place. enabled stays at its prior value to preserve
+    // a user's disable toggle across reloads.
+    conn.execute(
+        "INSERT INTO trackers (workspace_id, name, yaml_source, schema_json, enabled) \
+         VALUES (?1, ?2, ?3, ?4, 1) \
+         ON CONFLICT(workspace_id, name) DO UPDATE SET \
+             yaml_source = excluded.yaml_source, \
+             schema_json = excluded.schema_json",
+        params![workspace_id, name, yaml_source, schema_json],
+    )?;
+    let row = conn
+        .query_row(
+            "SELECT id, workspace_id, name, yaml_source, schema_json, enabled \
+             FROM trackers WHERE workspace_id = ?1 AND name = ?2",
+            params![workspace_id, name],
+            |row| {
+                let enabled_int: i64 = row.get(5)?;
+                Ok(Tracker {
+                    id: row.get(0)?,
+                    workspace_id: row.get(1)?,
+                    name: row.get(2)?,
+                    yaml_source: row.get(3)?,
+                    schema_json: row.get(4)?,
+                    enabled: enabled_int != 0,
+                })
+            },
+        )
+        .optional()?;
+    row.ok_or_else(|| {
+        DbError::NotFound(format!(
+            "tracker (workspace_id={}, name={}) upsert disappeared",
+            workspace_id, name
+        ))
+    })
+}
+
+fn handle_list_trackers(conn: &Connection, workspace_id: i64) -> Result<Vec<Tracker>, DbError> {
+    let mut stmt = conn.prepare(
+        "SELECT id, workspace_id, name, yaml_source, schema_json, enabled \
+         FROM trackers WHERE workspace_id = ?1 ORDER BY name ASC",
+    )?;
+    let rows = stmt
+        .query_map(params![workspace_id], |row| {
+            let enabled_int: i64 = row.get(5)?;
+            Ok(Tracker {
+                id: row.get(0)?,
+                workspace_id: row.get(1)?,
+                name: row.get(2)?,
+                yaml_source: row.get(3)?,
+                schema_json: row.get(4)?,
+                enabled: enabled_int != 0,
+            })
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(rows)
+}
+
+fn handle_get_tracker_by_name(
+    conn: &Connection,
+    workspace_id: i64,
+    name: &str,
+) -> Result<Option<Tracker>, DbError> {
+    let row = conn
+        .query_row(
+            "SELECT id, workspace_id, name, yaml_source, schema_json, enabled \
+             FROM trackers WHERE workspace_id = ?1 AND name = ?2",
+            params![workspace_id, name],
+            |row| {
+                let enabled_int: i64 = row.get(5)?;
+                Ok(Tracker {
+                    id: row.get(0)?,
+                    workspace_id: row.get(1)?,
+                    name: row.get(2)?,
+                    yaml_source: row.get(3)?,
+                    schema_json: row.get(4)?,
+                    enabled: enabled_int != 0,
+                })
+            },
+        )
+        .optional()?;
+    Ok(row)
+}
+
+fn handle_create_tracker_item(
+    conn: &Connection,
+    tracker_id: i64,
+    public_id: &str,
+    status: Option<&str>,
+    fields_json: &str,
+) -> Result<TrackerItem, DbError> {
+    let now = now_millis();
+    conn.execute(
+        "INSERT INTO tracker_items (tracker_id, public_id, status, fields_json, created_at, updated_at) \
+         VALUES (?1, ?2, ?3, ?4, ?5, ?5)",
+        params![tracker_id, public_id, status, fields_json, now],
+    )?;
+    let id = conn.last_insert_rowid();
+    Ok(TrackerItem {
+        id,
+        tracker_id,
+        public_id: public_id.to_string(),
+        status: status.map(|s| s.to_string()),
+        fields_json: fields_json.to_string(),
+        created_at: now,
+        updated_at: now,
+    })
+}
+
+fn handle_update_tracker_item(
+    conn: &Connection,
+    id: i64,
+    status: Option<&str>,
+    fields_json: &str,
+) -> Result<TrackerItem, DbError> {
+    let now = now_millis();
+    let updated = conn.execute(
+        "UPDATE tracker_items SET status = ?1, fields_json = ?2, updated_at = ?3 \
+         WHERE id = ?4",
+        params![status, fields_json, now, id],
+    )?;
+    if updated == 0 {
+        return Err(DbError::NotFound(format!(
+            "tracker_item id {} not found",
+            id
+        )));
+    }
+    let row = conn
+        .query_row(
+            "SELECT id, tracker_id, public_id, status, fields_json, created_at, updated_at \
+             FROM tracker_items WHERE id = ?1",
+            params![id],
+            |row| {
+                Ok(TrackerItem {
+                    id: row.get(0)?,
+                    tracker_id: row.get(1)?,
+                    public_id: row.get(2)?,
+                    status: row.get(3)?,
+                    fields_json: row.get(4)?,
+                    created_at: row.get(5)?,
+                    updated_at: row.get(6)?,
+                })
+            },
+        )
+        .optional()?;
+    row.ok_or_else(|| DbError::NotFound(format!("tracker_item {} disappeared", id)))
+}
+
+fn handle_list_tracker_items(
+    conn: &Connection,
+    tracker_id: i64,
+    status_filter: Option<&str>,
+) -> Result<Vec<TrackerItem>, DbError> {
+    let map_row = |row: &rusqlite::Row<'_>| {
+        Ok(TrackerItem {
+            id: row.get(0)?,
+            tracker_id: row.get(1)?,
+            public_id: row.get(2)?,
+            status: row.get(3)?,
+            fields_json: row.get(4)?,
+            created_at: row.get(5)?,
+            updated_at: row.get(6)?,
+        })
+    };
+    let rows: Vec<TrackerItem> = match status_filter {
+        Some(filter) => {
+            let mut stmt = conn.prepare(
+                "SELECT id, tracker_id, public_id, status, fields_json, created_at, updated_at \
+                 FROM tracker_items \
+                 WHERE tracker_id = ?1 AND status = ?2 \
+                 ORDER BY created_at ASC",
+            )?;
+            stmt.query_map(params![tracker_id, filter], map_row)?
+                .collect::<Result<Vec<_>, _>>()?
+        }
+        None => {
+            let mut stmt = conn.prepare(
+                "SELECT id, tracker_id, public_id, status, fields_json, created_at, updated_at \
+                 FROM tracker_items \
+                 WHERE tracker_id = ?1 \
+                 ORDER BY created_at ASC",
+            )?;
+            stmt.query_map(params![tracker_id], map_row)?
+                .collect::<Result<Vec<_>, _>>()?
+        }
+    };
+    Ok(rows)
+}
+
+fn handle_list_tracker_item_ids(
+    conn: &Connection,
+    tracker_id: i64,
+) -> Result<Vec<String>, DbError> {
+    let mut stmt = conn.prepare(
+        "SELECT public_id FROM tracker_items WHERE tracker_id = ?1",
+    )?;
+    let rows = stmt
+        .query_map(params![tracker_id], |row| row.get::<_, String>(0))?
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(rows)
+}
+
+fn handle_get_tracker_by_id(
+    conn: &Connection,
+    tracker_id: i64,
+) -> Result<Option<Tracker>, DbError> {
+    let row = conn
+        .query_row(
+            "SELECT id, workspace_id, name, yaml_source, schema_json, enabled \
+             FROM trackers WHERE id = ?1",
+            params![tracker_id],
+            |row| {
+                let enabled_int: i64 = row.get(5)?;
+                Ok(Tracker {
+                    id: row.get(0)?,
+                    workspace_id: row.get(1)?,
+                    name: row.get(2)?,
+                    yaml_source: row.get(3)?,
+                    schema_json: row.get(4)?,
+                    enabled: enabled_int != 0,
+                })
+            },
+        )
+        .optional()?;
+    Ok(row)
+}

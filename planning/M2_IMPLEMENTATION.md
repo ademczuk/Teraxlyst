@@ -1,7 +1,6 @@
 # M2 Implementation: Multi-session manager + transcript streaming
 
-Date: 2026-05-15
-Milestone: M2.0 (reduced scope vs the original ROADMAP M2)
+Date: 2026-05-15. Milestone: M2.0 (reduced scope vs ROADMAP M2).
 
 ## Files created
 
@@ -18,8 +17,8 @@ Rust under `src-tauri/src/sessions/`:
 TypeScript under `src/modules/sessions/`:
 
 - `types.ts` - mirrors the Rust types. `TranscriptEvent` is a discriminated union keyed on `type`.
-- `useSessionManager.ts` - `useSessions()` hook. Calls `session_list_running` on mount, listens on `teraxlyst:session-events`, keeps a per-session ring buffer (cap 200), exposes `createSession` / `killSession` / `refreshRunning`.
-- `SessionList.tsx` - the minimal UI: prompt textarea, Start button, running list with Kill buttons, flat tail of the last 50 events.
+- `useSessionManager.ts` - `useSessions()` hook. Calls `session_list_running` on mount, listens on `teraxlyst:session-events`, keeps a per-session ring buffer (cap 200), exposes create/kill/refresh.
+- `SessionList.tsx` - prompt textarea, Start button, running list with Kill buttons, flat tail of last 50 events.
 - `index.ts` - re-exports.
 
 Wiring:
@@ -57,7 +56,7 @@ Scaffold (marked TODO in source):
 5. **Batched DB writes.** Flusher writes one event at a time. M2.1 batches via a new DbRequest variant.
 6. **Real-bin smoke test.** `real_claude_code_smoke` is `#[ignore]`d because CI has no `claude`. M2.1 enables it on a runner with the CLI.
 
-## Risk callouts
+## Risks
 
-- **Provider parser is fragile.** Plain-text fallback works for the common case but a real Claude Code session emits structured tool calls and permission prompts. Rework in M2.1.
-- **Windows test skip.** The integration test is `cfg(unix)` because `bash` is not universally available on Windows. Linux CI runs it; Windows CI skips cleanly.
+- Plain-text parser is fragile. Real Claude Code emits structured tool calls and permission prompts. Rework in M2.1.
+- Test is `cfg(unix)` because `bash` isn't on Windows. Linux + macOS CI runs it; Windows skips.
