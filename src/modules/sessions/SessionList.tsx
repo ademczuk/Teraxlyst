@@ -12,7 +12,7 @@ type WorkspaceLite = { id: number; name: string; path: string };
 
 const MAX_TRANSCRIPT_ROWS = 50;
 
-export function SessionList(): JSX.Element {
+export function SessionList(){
   const { state, createSession, killSession, refreshRunning } = useSessions();
 
   // We need at least one workspace to create sessions against. v1 just

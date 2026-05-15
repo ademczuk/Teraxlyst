@@ -47,12 +47,12 @@ impl TranscriptEvent {
     // schema accepts because the column is a free-form TEXT.
     pub fn db_kind(&self) -> &'static str {
         match self {
-            TranscriptEvent::UserMessage(_) => "user",
-            TranscriptEvent::AssistantText(_) => "assistant",
+            TranscriptEvent::UserMessage { .. } => "user",
+            TranscriptEvent::AssistantText { .. } => "assistant",
             TranscriptEvent::ToolCall { .. } => "tool_call",
             TranscriptEvent::ToolResult { .. } => "tool_result",
-            TranscriptEvent::SystemNotice(_) => "system_notice",
-            TranscriptEvent::Error(_) => "error",
+            TranscriptEvent::SystemNotice { .. } => "system_notice",
+            TranscriptEvent::Error { .. } => "error",
             TranscriptEvent::Completed => "completed",
         }
     }

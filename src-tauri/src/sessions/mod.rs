@@ -12,6 +12,4 @@ pub mod types;
 #[cfg(test)]
 mod tests;
 
-pub use error::ManagerError;
 pub use manager::SessionManager;
-pub use types::{Provider, TranscriptEvent};
