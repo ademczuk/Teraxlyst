@@ -1,46 +1,29 @@
-# Security
+# Security policy
 
-Terax runs shells, reads/writes files, and talks to AI providers — so security bugs matter. If you find one, please tell us before posting it publicly.
+Teraxlyst is in early planning. There are no releases yet and no users to put at risk.
 
 ## Reporting
 
-Email **security@terax.app**. Include:
+Until 0.1.0 ships, file a regular GitHub issue at https://github.com/ademczuk/Teraxlyst/issues. Do not include working exploit code in public issues; describe the impact and the rough mechanism, and the issue can be moved to a private advisory if needed.
 
-- What the issue is and what it lets an attacker do
-- Steps to reproduce (a small PoC is great)
-- Version, OS, arch
+A proper coordinated disclosure policy with a dedicated reporting channel will land before the 0.1.0 release as part of milestone M6 (see `planning/ROADMAP.md`).
 
-We'll get back to you within a few days. Once it's fixed, we'll credit you in the release notes — unless you'd rather stay anonymous.
+## Upstream
 
-Please **don't** open a public GitHub issue for security reports.
+Teraxlyst is forked from terax-ai v0.6.5. Vulnerabilities in unmodified upstream code may also affect terax-ai. Please report those to both projects:
 
-## Supported versions
+- terax-ai: https://github.com/crynta/terax-ai/blob/main/SECURITY.md
+- Teraxlyst: the issue tracker above
 
-Until `1.0.0`, only the latest minor gets security fixes. Right now that's `0.5.x`. 
+## In scope (when releases exist)
 
-## What's in scope
+- The Rust backend in `src-tauri/` (PTY, FS, IPC, plugins, MCP host)
+- The frontend in `src/` wherever untrusted input lands (terminal output, file content, AI tool results, credentials)
+- Release artifacts on GitHub
+- The auto-updater (once reinstated in M6)
 
-- The Rust backend in `src-tauri/` (PTY, FS, IPC, plugins)
-- The frontend in `src/` — anywhere untrusted input lands (terminal output, file content, AI tool results, credentials)
-- Release artifacts on GitHub and `terax.app`
-- The auto-updater
+## Not in scope
 
-## What's not
-
-- Bugs in upstream deps (Tauri, xterm.js, CodeMirror, AI SDKs…) — report those upstream. We'll ship the fix once it's released.
-- Anything that needs an already-compromised machine or a local attacker with shell access
-- Older versions (`< 0.5`)
-
-## What we do to keep things safe
-
-- **API keys** live in the OS keychain via `keyring` — not on disk, not in `localStorage`, not in logs.
-- **No telemetry.** Terax only talks to the network when you ask it to (AI requests, update checks, web preview).
-- **AI tool approval.** File writes and shell commands from the agent need your OK before they run.
-- **No Node in the renderer.** The frontend only reaches the host through the allow-listed Tauri commands.
-- **Signed releases.** Updates are verified before they're applied.
-
-## What we can't promise
-
-- Terax runs whatever you (or the agent) tell it to run, with your permissions. That's kind of the point of a terminal.
-- AI providers see whatever you send them. Read their retention policies.
-- Local LLM endpoints (LM Studio, OpenAI-compatible) are trusted at the network level — only point Terax at servers you control.
+- Upstream dependency bugs (report those upstream)
+- Anything requiring an already-compromised host or a local attacker with shell access
+- Pre-0.1.0 development builds

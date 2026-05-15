@@ -2,6 +2,8 @@
 
 Recorded 2026-05-15. After writing the first pass of the planning docs, I re-read everything looking for assumptions I'd made too quickly. This file captures what changed and what still bothers me.
 
+A second self-review after the M0 commit caught issues I should have spotted earlier. The most serious was a license-compliance bug: the original LICENSE file in this repo carried only "Copyright 2026 ademczuk" and dropped the upstream "Copyright 2026 Crynta" line that Apache-2.0 §4(c) requires fork authors to preserve. Fixed in commit 0.1.0-pre.2. The lesson: when forking, the upstream LICENSE file is canonical content to keep, not template text to overwrite. Other items from the same self-review (CI workflows live against missing secrets, governance docs containing false security email and 22 em-dashes, terax-ai UI screenshots being shown as ours) are documented in CHANGELOG.md.
+
 ## What I changed
 
 | Issue | Resolution |

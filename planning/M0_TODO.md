@@ -2,7 +2,10 @@
 
 Tracks rebrand work that did NOT land in the initial fork commit. Items are deliberate deferrals - low risk to leave, high risk to change blindly.
 
-Status as of 2026-05-15: initial fork landed with package/binary names rebranded. The rest of this list is queued for M0.1.
+Status as of 2026-05-15:
+- Initial fork landed with package/binary names rebranded.
+- Self-review pass fixed: LICENSE attribution, CODEOWNERS, governance docs, CI workflows disabled, terax-ai screenshots removed. See CHANGELOG.md 0.1.0-pre.2.
+- Remaining work is queued for M0.1.
 
 ## Critical (block M2 or M3)
 
@@ -40,7 +43,11 @@ In `src-tauri/src/`:
 
 ## CI workflow
 
-- `.github/workflows/*.yml` - reference terax-ai paths, release tag patterns. Audit and update repo URLs before any tagged release.
+Files moved to `.github/workflows-pending/` to disable execution against missing secrets. Rewrite plan:
+
+- `ci.yml` is mostly clean (frontend type-check + cargo check). Move back to `.github/workflows/` once we have verified the rebrand compiles locally.
+- `release.yml` references Apple signing secrets (`APPLE_API_KEY_PATH`, `APPLE_CERTIFICATE`, `TAURI_SIGNING_PRIVATE_KEY`, etc.) that do not exist in this repo. Rewrite as part of M6 release prep with a Teraxlyst-owned signing keypair.
+- Issue and PR templates similarly parked at `.github/templates-pending/`. Rewrite with Teraxlyst-specific labels and a planning-tag option.
 
 ## Updater
 

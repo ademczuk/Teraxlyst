@@ -2,6 +2,26 @@
 
 All notable changes to Teraxlyst. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/) (pre-`1.0`, minor bumps may include breaking changes).
 
+## [0.1.0-pre.2] - 2026-05-15
+
+Hardening pass after self-review.
+
+### Fixed
+
+- **License compliance.** `LICENSE` now preserves the original "Copyright 2026 Crynta" line per Apache-2.0 §4(c) and adds "Copyright 2026 ademczuk" for Teraxlyst modifications. The prior commit stripped the upstream attribution, which would have been a license violation if released.
+- `CODEOWNERS` no longer routes review requests to @crynta; set to @ademczuk.
+
+### Changed
+
+- Inherited GitHub Actions workflows moved from `.github/workflows/` to `.github/workflows-pending/` to prevent them firing against secrets and signing keys that do not exist in this repo. Will be rewritten and re-enabled in M0.1 or M6.
+- Inherited issue and PR templates moved to `.github/templates-pending/` for the same reason. Will be rewritten before re-enabling.
+- `SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md` replaced with minimal placeholders. Original terax-ai versions referenced a `security@terax.app` address we do not own and contained 22 em-dashes plus dozens of "Terax" references. Cleaner to rewrite than to scrub.
+- Removed inherited terax-ai UI screenshots from `docs/`. They depicted terax-ai's interface, not Teraxlyst's.
+
+### Updated
+
+- `README.md` status table: M0 corrected from "not started" to "partial (file-level fork done, build not yet verified)".
+
 ## [0.1.0-pre] - 2026-05-15
 
 Initial fork from terax-ai v0.6.5 (released 2026-05-15, https://github.com/crynta/terax-ai/releases/tag/v0.6.5).
