@@ -58,6 +58,12 @@ similar = "2"
 # exactly so we can swap forks later without code churn.
 serde_yaml_ng = "0.10"
 
+[features]
+# Off-by-default feature for the rmcp stdio wire-protocol surface in
+# src/mcp/server.rs (spawn_stdio_server). M3 ships the in-process toolset
+# only; the stdio bridge is a future productionization step.
+mcp-stdio = []
+
 [dev-dependencies]
 tempfile = "3"
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "fs", "test-util", "time"] }
