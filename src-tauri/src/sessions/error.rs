@@ -17,6 +17,9 @@ pub enum ManagerError {
     AlreadyRunning(i64),
     #[error("failed to spawn provider: {0}")]
     SpawnFailed(String),
+    // Reserved for v2.1 channel-drop diagnostics. The variant exists so the
+    // public error surface is stable when we wire it up.
+    #[allow(dead_code)]
     #[error("channel: {0}")]
     Channel(String),
 }

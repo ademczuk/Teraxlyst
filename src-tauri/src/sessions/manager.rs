@@ -82,6 +82,7 @@ impl SessionManager {
     // binary. Lets the integration test exercise the full pipeline without
     // depending on `claude` being installed.
     #[cfg(test)]
+    #[allow(clippy::too_many_arguments)]
     pub async fn create_with_program<R: Runtime>(
         &self,
         db: &DbHandle,
@@ -156,7 +157,11 @@ impl SessionManager {
         // before calling).
         let child = if let Some((program, args)) = program_override.as_ref() {
             let arg_refs: Vec<&str> = args.iter().map(String::as_str).collect();
-            spawn_claude_code(&workspace_path, &prompt, Some((program, &arg_refs)))?
+            spawn_claude_code(
+                &workspace_path,
+                &prompt,
+                Some((program.as_str(), arg_refs.as_slice())),
+            )?
         } else {
             spawn_claude_code(&workspace_path, &prompt, None)?
         };
