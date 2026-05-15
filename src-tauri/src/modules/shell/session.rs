@@ -36,7 +36,7 @@ pub struct SessionRunOutput {
 /// Sentinel emitted on stdout immediately before the command exits, so we can
 /// recover the post-command cwd. Picks an unlikely literal — collisions with
 /// real command output would corrupt cwd tracking.
-const CWD_SENTINEL: &str = "__TERAX_CWD__";
+const CWD_SENTINEL: &str = "__TERAXLYST_CWD__";
 
 impl ShellSession {
     pub fn new(initial_cwd: String, workspace: WorkspaceEnv) -> Self {
@@ -115,7 +115,7 @@ impl ShellSession {
 
 fn wrap_posix_with_sentinel(command: &str) -> String {
     format!(
-        "{command}\n__terax_rc=$?\nprintf '\\n%s%s\\n' '{CWD_SENTINEL}' \"$(pwd)\"\nexit $__terax_rc\n",
+        "{command}\n__teraxlyst_rc=$?\nprintf '\\n%s%s\\n' '{CWD_SENTINEL}' \"$(pwd)\"\nexit $__teraxlyst_rc\n",
     )
 }
 
@@ -130,7 +130,7 @@ fn wrap_with_sentinel(command: &str, workspace: &WorkspaceEnv) -> String {
     #[cfg(windows)]
     {
         format!(
-        "{command}\n$__terax_rc = if ($null -ne $LASTEXITCODE) {{ $LASTEXITCODE }} elseif ($?) {{ 0 }} else {{ 1 }}\n\"`n{CWD_SENTINEL}$($PWD.Path)\"\nexit $__terax_rc\n",
+        "{command}\n$__teraxlyst_rc = if ($null -ne $LASTEXITCODE) {{ $LASTEXITCODE }} elseif ($?) {{ 0 }} else {{ 1 }}\n\"`n{CWD_SENTINEL}$($PWD.Path)\"\nexit $__teraxlyst_rc\n",
     )
     }
 }

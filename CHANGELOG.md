@@ -2,6 +2,47 @@
 
 All notable changes to Teraxlyst. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/) (pre-`1.0`, minor bumps may include breaking changes).
 
+## [0.1.0-pre.4] - 2026-05-15
+
+M0 closeout pass. The deferred-by-design lockstep renames are now done. Two parallel sub-agents covered the persistence layer and the shell-integration scripts; the remaining items were handled inline.
+
+### Added
+
+- `src/lib/migration.ts`: one-time, idempotent localStorage key migration helper. Copies legacy `terax-*` and `terax:*` keys to the new `teraxlyst-*` / `teraxlyst:*` keys on first launch, then removes the originals. Try/catch-wrapped so a permission failure doesn't kill app startup. Wired into `src/main.tsx` before the React root mounts. No-op on second run.
+
+### Changed
+
+- **Frontend persistence** (sub-agent, 12 files): renamed 2 localStorage keys, 5 tauri-plugin-store filenames (`terax-settings.json` -> `teraxlyst-settings.json`, plus the four `terax-ai-*.json` files), 1 OS keychain service name (`terax-ai` -> `teraxlyst`), 4 custom event names (`teraxlyst://prefs-changed` and the three other change events), 3 CSS identifiers (`teraxlyst-collapsible-content` class + `teraxlyst-collapsible-down/up` keyframes) across globals.css + 2 consumers, and the `<teraxlyst-command>` wire-format token + `TERAXLYST_CMD_RE` regex paired across producer and consumer. Detail: `planning/M0_FRONTEND_PERSISTENCE_RENAME.md`.
+- **Backend shell integration** (sub-agent, 9 files): renamed all script-internal function prefixes (`_teraxlyst_precmd`, `_teraxlyst_urlencode`, `_teraxlyst_preexec`, etc.) across bashrc.bash, zshrc.zsh, zshenv.zsh, zlogin.zsh, zprofile.zsh, init.fish, profile.ps1; renamed all env vars (`TERAXLYST_USER_ZDOTDIR`, `TERAXLYST_TERMINAL`, `__TERAXLYST_HOOKS_LOADED`, `__TERAXLYST_PS1_INJECTED`); renamed cache path to `~/.cache/teraxlyst/shell-integration`; renamed CWD sentinel `__TERAXLYST_CWD__`; renamed per-command wrapper var `__teraxlyst_rc`. Lockstep verified: every emit from Rust pairs with the corresponding script-side read. Detail: `planning/M0_BACKEND_SCRIPTS_RENAME.md`.
+- **Tauri events crossing the Rust/TS boundary** (inline): `teraxlyst:settings-tab` and `teraxlyst:ai-attach-file` paired in `src-tauri/src/lib.rs` + `src/settings/SettingsApp.tsx` and `src/app/App.tsx` + `src/modules/ai/lib/composer.tsx`.
+- **Domain references** (inline): `WEBSITE` constant in `AboutSection.tsx` and OpenRouter `HTTP-Referer` in `agent.ts` now point at `https://github.com/ademczuk/Teraxlyst`. This is a placeholder until a dedicated domain is registered.
+- **CI workflow extended**: added `rust` job to `.github/workflows/ci.yml` that runs `cargo check` + `cargo clippy -- -D warnings` against `src-tauri/` on ubuntu-22.04 with webkit2gtk + gtk system deps. Caches cargo registry and target/ via swatinem/rust-cache. This validates the backend compiles on at least one platform (since local Windows MSVC isn't available).
+
+### Verified
+
+- `pnpm exec tsc --noEmit`: clean after all renames.
+- `pnpm build`: clean, 13.54s.
+- AI-marker scan on all 22 authored docs + new migration helper: zero hits.
+- Cross-file lockstep correctness verified by both sub-agents via post-edit grep audits.
+
+### Migration story
+
+- **localStorage and event listeners**: automatic on first launch via the new migration helper.
+- **tauri-plugin-store JSON files**: NOT migrated. Files live in the app data dir; old files are silently orphaned. Acceptable because there are no v0.1 users yet. Dev-mode users with pre-rename state can copy files manually if they want them.
+- **OS keychain entries**: NOT migrated. macOS Keychain / Windows Credential Manager / Linux secret-service migrations are cross-platform painful. Users will need to re-enter API keys after upgrade. Documented in the persistence-rename report.
+- **Shell-integration cache `~/.cache/terax/`**: orphan directory left on disk after upgrade. Inline comment in `shell_init.rs` notes users can `rm -rf` it manually.
+
+### Out of scope (per user direction)
+
+- Linux distro install command rewrite (`terax-bin` AUR, `Terax_*.deb`, `Terax-*.rpm`) in `UpdaterDialog.tsx`.
+- Mobile icon assets (`src-tauri/icons/android/`, `src-tauri/icons/ios/`).
+
+### Still deferred to M6 (release prep, not M0)
+
+- Auto-updater minisign keypair generation and config.
+- macOS notarization and Windows code signing.
+- Cross-platform release pipeline (currently parked at `.github/workflows-pending/release.yml`).
+
 ## [0.1.0-pre.3] - 2026-05-15
 
 M0 follow-up pass. Three parallel sub-agents covered the file-level rebrand surface.

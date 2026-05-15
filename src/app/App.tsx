@@ -379,7 +379,7 @@ export default function App() {
       // Dispatch a window event the composer listens for. Same pattern as
       // selections — keeps file-explorer decoupled from the AI module.
       window.dispatchEvent(
-        new CustomEvent<string>("terax:ai-attach-file", { detail: path }),
+        new CustomEvent<string>("teraxlyst:ai-attach-file", { detail: path }),
       );
       openPanel();
       focusInput(null);

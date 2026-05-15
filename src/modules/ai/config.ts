@@ -1,4 +1,4 @@
-export const KEYRING_SERVICE = "terax-ai";
+export const KEYRING_SERVICE = "teraxlyst";
 
 export type ProviderId =
   | "openai"

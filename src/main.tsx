@@ -8,11 +8,18 @@ import "./styles/globals.css";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import ReactDOM from "react-dom/client";
 import App from "./app/App";
+import { runOneTimeMigration } from "./lib/migration";
 import { USE_CUSTOM_WINDOW_CONTROLS } from "./lib/platform";
 
 if (USE_CUSTOM_WINDOW_CONTROLS) {
   document.documentElement.dataset.chrome = "borderless";
 }
+
+// Migrate legacy `terax-*` / `terax:*` localStorage keys to the rebranded
+// `teraxlyst-*` / `teraxlyst:*` prefixes before any component-mount path
+// reads localStorage (e.g. ThemeProvider's fast-path read inside useState).
+// Synchronous and non-blocking; wrapped in its own try/catch internally.
+runOneTimeMigration();
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <App />,

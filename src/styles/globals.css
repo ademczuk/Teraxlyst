@@ -241,7 +241,7 @@ html *::-webkit-scrollbar {
   display: none;
 }
 
-@keyframes terax-collapsible-down {
+@keyframes teraxlyst-collapsible-down {
   from {
     height: 0;
     opacity: 0;
@@ -252,7 +252,7 @@ html *::-webkit-scrollbar {
   }
 }
 
-@keyframes terax-collapsible-up {
+@keyframes teraxlyst-collapsible-up {
   from {
     height: var(--radix-collapsible-content-height);
     opacity: 1;
@@ -263,12 +263,12 @@ html *::-webkit-scrollbar {
   }
 }
 
-.terax-collapsible-content {
+.teraxlyst-collapsible-content {
   overflow: hidden;
 }
-.terax-collapsible-content[data-state="open"] {
-  animation: terax-collapsible-down 180ms cubic-bezier(0.4, 0, 0.2, 1);
+.teraxlyst-collapsible-content[data-state="open"] {
+  animation: teraxlyst-collapsible-down 180ms cubic-bezier(0.4, 0, 0.2, 1);
 }
-.terax-collapsible-content[data-state="closed"] {
-  animation: terax-collapsible-up 160ms cubic-bezier(0.4, 0, 0.2, 1);
+.teraxlyst-collapsible-content[data-state="closed"] {
+  animation: teraxlyst-collapsible-up 160ms cubic-bezier(0.4, 0, 0.2, 1);
 }

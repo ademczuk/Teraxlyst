@@ -45,11 +45,11 @@ export const SLASH_COMMANDS: Record<string, SlashCommandMeta> = {
   },
 };
 
-export const TERAX_CMD_RE =
-  /^<terax-command\s+name="([a-z0-9-]+)"(?:\s+state="([a-z]+)")?\s*\/>(?:\n+|$)/;
+export const TERAXLYST_CMD_RE =
+  /^<teraxlyst-command\s+name="([a-z0-9-]+)"(?:\s+state="([a-z]+)")?\s*\/>(?:\n+|$)/;
 
 export function wrapWithCommandMarker(prompt: string, name: string): string {
-  return `<terax-command name="${name}" />\n\n${prompt}`;
+  return `<teraxlyst-command name="${name}" />\n\n${prompt}`;
 }
 
 export function tryRunSlashCommand(input: string): SlashOutcome {

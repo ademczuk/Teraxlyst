@@ -132,7 +132,7 @@ export async function buildLanguageModel(
         baseURL: "https://openrouter.ai/api/v1",
         apiKey: key,
         headers: {
-          "HTTP-Referer": "https://terax.ai",
+          "HTTP-Referer": "https://github.com/ademczuk/Teraxlyst",
           "X-Title": "Teraxlyst",
         },
       })(resolvedModelId);

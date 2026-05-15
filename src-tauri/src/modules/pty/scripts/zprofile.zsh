@@ -1,9 +1,9 @@
-# terax-shell-integration (zprofile)
+# teraxlyst-shell-integration (zprofile)
 #
 # See zshenv.zsh for the rationale on the trailing `:`.
 {
-  _terax_user_zdotdir="${TERAX_USER_ZDOTDIR:-$HOME}"
-  [ -f "$_terax_user_zdotdir/.zprofile" ] && source "$_terax_user_zdotdir/.zprofile"
-  unset _terax_user_zdotdir
+  _teraxlyst_user_zdotdir="${TERAXLYST_USER_ZDOTDIR:-$HOME}"
+  [ -f "$_teraxlyst_user_zdotdir/.zprofile" ] && source "$_teraxlyst_user_zdotdir/.zprofile"
+  unset _teraxlyst_user_zdotdir
 }
 :

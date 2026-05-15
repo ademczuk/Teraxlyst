@@ -2,6 +2,8 @@
 
 Tracks rebrand work that did NOT land in the initial fork commit. Items are deliberate deferrals - low risk to leave, high risk to change blindly.
 
+Status as of 2026-05-15 (after 0.1.0-pre.4): M0 file-level rebrand is complete. Local frontend build is green. CI now runs cargo check + clippy on Linux. Remaining items below are out of M0 scope (M6 release prep or explicit user-skipped Linux/mobile items).
+
 Status as of 2026-05-15 (after 0.1.0-pre.3):
 
 - Initial fork landed with package/binary names rebranded.
