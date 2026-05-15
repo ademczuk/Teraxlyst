@@ -1,3 +1,8 @@
+// M4 commands exist but their registration in tauri::generate_handler!
+// was not completed before the sub-agent rate-limited. Allow dead code
+// until M4.1 wires the four tracker commands into lib.rs.
+#![allow(dead_code)]
+
 // Tracker module: YAML-defined entity types with schema validation,
 // DB-backed CRUD, and Tauri commands. See planning/ARCHITECTURE.md
 // section 7 and planning/ROADMAP.md M4.
