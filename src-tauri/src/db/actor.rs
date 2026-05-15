@@ -194,6 +194,7 @@ pub fn spawn_at_path(db_path: &Path) -> Result<DbHandle, DbError> {
 // In-memory variant used by tests. The schema must be created on the same
 // connection that the actor takes ownership of, because each in-memory
 // SQLite handle has its own database.
+#[cfg(test)]
 pub fn spawn_in_memory() -> Result<DbHandle, DbError> {
     let mut conn = Connection::open_in_memory()?;
     migrations::run_migrations(&mut conn)?;

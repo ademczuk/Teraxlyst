@@ -9,5 +9,4 @@ pub mod types;
 #[cfg(test)]
 mod tests;
 
-pub use actor::{spawn_at_path, DbHandle};
-pub use error::DbError;
+pub use actor::spawn_at_path;
