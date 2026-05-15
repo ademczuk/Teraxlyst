@@ -1,3 +1,4 @@
+mod db;
 mod modules;
 
 use modules::{fs, net, pty, secrets, shell, workspace};
@@ -84,6 +85,17 @@ pub fn run() {
         .manage(pty::PtyState::default())
         .manage(shell::ShellState::default())
         .manage(secrets::SecretsState::default())
+        .setup(|app| {
+            // Resolve <app_data_dir>/teraxlyst.sqlite. Create the directory
+            // if missing. Run migrations on the spawn path so the DB is
+            // ready before any command fires.
+            let app_data_dir = app.path().app_data_dir()?;
+            std::fs::create_dir_all(&app_data_dir)?;
+            let db_path = app_data_dir.join("teraxlyst.sqlite");
+            let handle = db::spawn_at_path(&db_path)?;
+            app.manage(handle);
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             pty::pty_open,
             pty::pty_write,
@@ -120,6 +132,14 @@ pub fn run() {
             net::lm_ping,
             net::ai_http_request,
             net::ai_http_stream,
+            db::commands::db_create_workspace,
+            db::commands::db_list_workspaces,
+            db::commands::db_create_session,
+            db::commands::db_append_event,
+            db::commands::db_list_events,
+            db::commands::db_create_diff_proposal,
+            db::commands::db_resolve_diff_proposal,
+            db::commands::db_list_pending_proposals,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
