@@ -42,6 +42,7 @@ import {
   type SearchTarget,
 } from "@/modules/header";
 import { PreviewStack, type PreviewPaneHandle } from "@/modules/preview";
+import { SessionList } from "@/modules/sessions";
 import { openSettingsWindow } from "@/modules/settings/openSettingsWindow";
 import { usePreferencesStore } from "@/modules/settings/preferences";
 import { onKeysChanged } from "@/modules/settings/store";
@@ -181,6 +182,7 @@ export default function App() {
 
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [newEditorOpen, setNewEditorOpen] = useState(false);
+  const [sessionsOpen, setSessionsOpen] = useState(false);
   const miniOpen = useChatStore((s) => s.mini.open);
   const openMini = useChatStore((s) => s.openMini);
   const focusInput = useChatStore((s) => s.focusInput);
@@ -923,6 +925,23 @@ export default function App() {
           />
 
           <UpdaterDialog />
+
+          {/* M2.0: AI Sessions overlay. Toggle button sits above the status
+              bar; the panel slides in from the right when open. Replaced
+              with a richer kanban surface in M2.1. */}
+          <button
+            type="button"
+            onClick={() => setSessionsOpen((v) => !v)}
+            className="fixed bottom-10 right-3 z-40 rounded border border-border bg-background px-3 py-1 text-xs shadow-sm"
+            title="Toggle AI sessions panel"
+          >
+            {sessionsOpen ? "Hide sessions" : "Sessions"}
+          </button>
+          {sessionsOpen ? (
+            <div className="fixed bottom-20 right-3 z-40 flex h-[60vh] w-[360px] flex-col overflow-hidden rounded border border-border bg-card shadow-lg">
+              <SessionList />
+            </div>
+          ) : null}
 
           <AlertDialog
             open={pendingCloseTab !== null}

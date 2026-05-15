@@ -1,5 +1,6 @@
 mod db;
 mod modules;
+mod sessions;
 
 use modules::{fs, net, pty, secrets, shell, workspace};
 use tauri::{Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
@@ -94,6 +95,9 @@ pub fn run() {
             let db_path = app_data_dir.join("teraxlyst.sqlite");
             let handle = db::spawn_at_path(&db_path)?;
             app.manage(handle);
+            // Session manager: in-memory registry of running AI sessions.
+            // No persistent state, so just install a fresh default.
+            app.manage(sessions::SessionManager::new());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -140,6 +144,9 @@ pub fn run() {
             db::commands::db_create_diff_proposal,
             db::commands::db_resolve_diff_proposal,
             db::commands::db_list_pending_proposals,
+            sessions::commands::session_create,
+            sessions::commands::session_kill,
+            sessions::commands::session_list_running,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
