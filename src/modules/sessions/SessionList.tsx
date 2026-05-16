@@ -1,8 +1,14 @@
 // SessionList: minimal M2.0 UI for the multi-session manager. Lists the
 // currently-running sessions and shows a flat stream of the latest 50
-// transcript events across all of them. Kanban view is M2.1.
+// transcript events across all of them.
+//
+// First-run behavior: if no workspace exists, auto-create one at the
+// user's home dir so the "Start session" button works immediately.
+// Nimbalyst does this; the explicit "create a workspace first" gate
+// was a usability bug in the M2.0 scaffold.
 
 import { invoke } from "@tauri-apps/api/core";
+import { homeDir } from "@tauri-apps/api/path";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { summarizeEvent, type TranscriptEvent } from "./types";
@@ -15,17 +21,39 @@ const MAX_TRANSCRIPT_ROWS = 50;
 export function SessionList(){
   const { state, createSession, killSession, refreshRunning } = useSessions();
 
-  // We need at least one workspace to create sessions against. v1 just
-  // picks the first one; a real workspace picker is M3+.
   const [workspaces, setWorkspaces] = useState<WorkspaceLite[]>([]);
   const [prompt, setPrompt] = useState<string>("");
   const [creating, setCreating] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    void invoke<WorkspaceLite[]>("db_list_workspaces")
-      .then((list) => setWorkspaces(list))
-      .catch((e) => setError(String(e)));
+    let cancelled = false;
+    async function loadOrSeed() {
+      try {
+        const list = await invoke<WorkspaceLite[]>("db_list_workspaces");
+        if (cancelled) return;
+        if (list.length > 0) {
+          setWorkspaces(list);
+          return;
+        }
+        // First run: auto-create a default workspace at $HOME so the
+        // user can immediately start a session without first navigating
+        // a workspace picker that does not exist yet.
+        const home = await homeDir();
+        const created = await invoke<WorkspaceLite>("db_create_workspace", {
+          path: home.replace(/[/\\]$/, ""),
+          name: "Home",
+        });
+        if (cancelled) return;
+        setWorkspaces([created]);
+      } catch (e) {
+        if (!cancelled) setError(String(e));
+      }
+    }
+    void loadOrSeed();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const activeWorkspace = workspaces[0] ?? null;
