@@ -1,0 +1,44 @@
+# Bugs tracker. Drop this file in your workspace at
+# .teraxlyst/trackers/bugs.yaml to enable it.
+#
+# An AI agent inside Teraxlyst can create + update items via the
+# tracker_create_item / tracker_update_item MCP tools.
+
+name: Bugs
+
+id_format:
+  type: sequential
+  prefix: BUG
+  pad: 3
+
+fields:
+  - name: title
+    type: string
+    roles: [title]
+  - name: severity
+    type: select
+    options: [low, medium, high, critical]
+  - name: status
+    type: select
+    roles: [workflowStatus]
+    options: [open, in_progress, fixed, wontfix, duplicate]
+  - name: reporter
+    type: user
+    roles: [reporter]
+  - name: assignee
+    type: user
+    roles: [assignee]
+  - name: tags
+    type: multiselect
+    roles: [tags]
+    options: [crash, regression, perf, ui, backend, security]
+  - name: description
+    type: text
+  - name: steps_to_reproduce
+    type: text
+  - name: created
+    type: datetime
+    auto: created_at
+  - name: updated
+    type: datetime
+    auto: updated_at

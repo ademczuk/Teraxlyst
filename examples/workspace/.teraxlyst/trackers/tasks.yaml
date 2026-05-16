@@ -1,0 +1,42 @@
+# Tasks tracker. Drop in your workspace at .teraxlyst/trackers/tasks.yaml.
+
+name: Tasks
+
+id_format:
+  type: sequential
+  prefix: TASK
+  pad: 3
+
+fields:
+  - name: title
+    type: string
+    roles: [title]
+  - name: status
+    type: select
+    roles: [workflowStatus]
+    options: [todo, doing, blocked, review, done]
+  - name: priority
+    type: select
+    roles: [priority]
+    options: [p0, p1, p2, p3]
+  - name: assignee
+    type: user
+    roles: [assignee]
+  - name: estimate_hours
+    type: number
+  - name: tags
+    type: multiselect
+    roles: [tags]
+  - name: blocked_by
+    type: reference
+  - name: notes
+    type: text
+  - name: due_date
+    type: date
+    roles: [dueDate]
+  - name: created
+    type: datetime
+    auto: created_at
+  - name: updated
+    type: datetime
+    auto: updated_at

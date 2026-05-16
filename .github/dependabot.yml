@@ -1,0 +1,50 @@
+# Dependabot keeps Cargo, npm, and Actions deps current.
+# Weekly cadence is enough for an early-stage project; rebase via the
+# "Refresh Cargo.lock" workflow when dependabot opens a Cargo PR.
+
+version: 2
+updates:
+  # Rust deps in src-tauri/Cargo.toml
+  - package-ecosystem: cargo
+    directory: /src-tauri
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - rust
+    commit-message:
+      prefix: "deps(cargo)"
+
+  # npm deps in package.json
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - npm
+    commit-message:
+      prefix: "deps(npm)"
+    # Tauri-related deps come in coordinated minor bumps; group them so
+    # we get one PR instead of seven.
+    groups:
+      tauri:
+        patterns:
+          - "@tauri-apps/*"
+          - "tauri-*"
+
+  # GitHub Actions versions
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3
+    labels:
+      - dependencies
+      - github-actions
+    commit-message:
+      prefix: "deps(ci)"

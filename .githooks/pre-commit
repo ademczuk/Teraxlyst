@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# Teraxlyst pre-commit hook: AI-marker scan + ASCII enforcement on
+# external-facing text. Bypass for emergencies with `git commit
+# --no-verify`. Activate this hook with:
+#
+#   git config core.hooksPath .githooks
+#
+# Run that once per clone. The setting is per-repo and survives pulls.
+
+set -eu
+
+# Files staged for commit that are external-facing (markdown, yaml,
+# json templates, html). We deliberately skip *.rs and *.ts source -
+# upstream content (e.g. the inherited Apache-2.0 LICENSE header)
+# carries em-dashes we keep verbatim, and the regex sweep already ran
+# against new authored code at write-time.
+mapfile -t staged < <(git diff --cached --name-only --diff-filter=ACMR | grep -E '\.(md|yaml|yml|html|tsx?|sql)$' || true)
+
+if [ "${#staged[@]}" -eq 0 ]; then
+  exit 0
+fi
+
+# Banned typographic chars (U+2014 em-dash, U+2013 en-dash, curly quotes,
+# ellipsis, arrows, zero-width). The grep pattern lists each codepoint
+# literally; LANG=C makes grep operate byte-wise.
+markers=$(LANG=C grep -lP '\xE2\x80\x94|\xE2\x80\x93|\xE2\x80\x98|\xE2\x80\x99|\xE2\x80\x9C|\xE2\x80\x9D|\xE2\x80\xA6|\xE2\x86\x92|\xE2\x86\x90|\xE2\x80\x8B' -- "${staged[@]}" 2>/dev/null || true)
+
+if [ -n "$markers" ]; then
+  echo "pre-commit: AI typographic markers found in staged files:" >&2
+  echo "$markers" | sed 's/^/  /' >&2
+  echo "" >&2
+  echo "Replace em-dashes with hyphens, curly quotes with straight, ellipsis with three periods." >&2
+  echo "Bypass with: git commit --no-verify (only when shipping verbatim upstream content)." >&2
+  exit 1
+fi
+
+# Banned phrases from CLAUDE.md global rules. Case-insensitive whole-word matches.
+phrases='\b(comprehensive|delv(e|es|ing)|tapestry|realm|embark|leverag(e|ed|ing)|nuanced|holistic|seamless)\b'
+phrase_hits=$(LANG=en_US.UTF-8 grep -inEH "$phrases" -- "${staged[@]}" 2>/dev/null || true)
+if [ -n "$phrase_hits" ]; then
+  echo "pre-commit: banned AI vocabulary in staged files:" >&2
+  echo "$phrase_hits" | sed 's/^/  /' >&2
+  echo "" >&2
+  echo "Rewrite without the flagged words." >&2
+  exit 1
+fi
+
+exit 0

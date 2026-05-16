@@ -1,0 +1,39 @@
+# Decisions tracker (ADR-style). Drop in workspace at
+# .teraxlyst/trackers/decisions.yaml.
+
+name: Decisions
+
+id_format:
+  type: sequential
+  prefix: DEC
+  pad: 4
+
+fields:
+  - name: title
+    type: string
+    roles: [title]
+  - name: status
+    type: select
+    roles: [workflowStatus]
+    options: [proposed, accepted, deprecated, superseded]
+  - name: context
+    type: text
+  - name: decision
+    type: text
+  - name: consequences
+    type: text
+  - name: alternatives
+    type: text
+  - name: stakeholders
+    type: multiselect
+  - name: superseded_by
+    type: reference
+  - name: tags
+    type: multiselect
+    roles: [tags]
+  - name: created
+    type: datetime
+    auto: created_at
+  - name: updated
+    type: datetime
+    auto: updated_at
