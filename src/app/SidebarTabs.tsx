@@ -2,7 +2,7 @@
 // panel to its right. Replaces the floating Sessions / Diffs overlay
 // toggles previously added in M2.0 / M5.1.
 //
-// Tab state lives in this component (useState) — sidebar contents are
+// Tab state lives in this component (useState); sidebar contents are
 // strictly local UI state and there is no need to plumb it through the
 // global tabs store. Default tab is "files" so the existing
 // FileExplorer-first behaviour is preserved on first launch.
@@ -13,19 +13,29 @@
 import { cn } from "@/lib/utils";
 import {
   BotIcon,
+  CanvasIcon,
   CheckListIcon,
   FileDiffIcon,
+  FlowchartIcon,
   Folder01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useState } from "react";
 
+import CanvasPanel from "./panels/CanvasPanel";
+import DiagramPanel from "./panels/DiagramPanel";
 import DiffsPanel from "./panels/DiffsPanel";
 import FilesPanel from "./panels/FilesPanel";
 import SessionsPanel from "./panels/SessionsPanel";
 import TrackersPanel from "./panels/TrackersPanel";
 
-type TabId = "files" | "sessions" | "trackers" | "diffs";
+type TabId =
+  | "files"
+  | "sessions"
+  | "trackers"
+  | "diffs"
+  | "diagram"
+  | "canvas";
 
 type TabSpec = {
   id: TabId;
@@ -38,6 +48,8 @@ const TABS: TabSpec[] = [
   { id: "sessions", label: "Sessions", icon: BotIcon },
   { id: "trackers", label: "Trackers", icon: CheckListIcon },
   { id: "diffs", label: "Diffs", icon: FileDiffIcon },
+  { id: "diagram", label: "Diagram", icon: FlowchartIcon },
+  { id: "canvas", label: "Canvas", icon: CanvasIcon },
 ];
 
 type FilesProps = {
@@ -51,10 +63,24 @@ type FilesProps = {
 
 type Props = {
   files: FilesProps;
+  onActiveChange?: (id: TabId) => void;
 };
 
-export function SidebarTabs({ files }: Props) {
+// Tabs that need a wide canvas (Mermaid SVG, Excalidraw whiteboard)
+// rather than a narrow nav strip. App.tsx watches the active tab via
+// onActiveChange and resizes the sidebar panel accordingly.
+export const WIDE_TABS: ReadonlySet<TabId> = new Set([
+  "diagram",
+  "canvas",
+]);
+
+export function SidebarTabs({ files, onActiveChange }: Props) {
   const [active, setActive] = useState<TabId>("files");
+
+  const handlePick = (id: TabId) => {
+    setActive(id);
+    onActiveChange?.(id);
+  };
 
   return (
     <div className="flex h-full min-h-0">
@@ -72,7 +98,7 @@ export function SidebarTabs({ files }: Props) {
               role="tab"
               aria-selected={isActive}
               title={t.label}
-              onClick={() => setActive(t.id)}
+              onClick={() => handlePick(t.id)}
               className={cn(
                 "relative flex h-8 w-8 items-center justify-center rounded text-muted-foreground transition-colors",
                 isActive
@@ -97,6 +123,8 @@ export function SidebarTabs({ files }: Props) {
         {active === "sessions" ? <SessionsPanel /> : null}
         {active === "trackers" ? <TrackersPanel /> : null}
         {active === "diffs" ? <DiffsPanel /> : null}
+        {active === "diagram" ? <DiagramPanel /> : null}
+        {active === "canvas" ? <CanvasPanel /> : null}
       </div>
     </div>
   );

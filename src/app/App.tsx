@@ -124,6 +124,10 @@ export default function App() {
   const [activeEditorHandle, setActiveEditorHandle] =
     useState<EditorPaneHandle | null>(null);
   const sidebarRef = useRef<PanelImperativeHandle | null>(null);
+  // True when we auto-grew the sidebar for the Diagram/Canvas tab. Used
+  // to only auto-shrink it back if we own the expansion - manual user
+  // drags should be respected.
+  const sidebarAutoExpandedRef = useRef(false);
   const toggleSidebar = useCallback(() => {
     const p = sidebarRef.current;
     if (!p) return;
@@ -136,7 +140,7 @@ export default function App() {
   const workspaceEnv = useWorkspaceEnvStore((s) => s.env);
   const setWorkspaceEnv = useWorkspaceEnvStore((s) => s.setEnv);
   useEffect(() => {
-    // Forward-slash form so explorerRoot stays equal across home → OSC 7.
+    // Forward-slash form so explorerRoot stays equal across home -> OSC 7.
     homeDir()
       .then((p) => setHome(p.replace(/\\/g, "/")))
       .catch(() => setHome(null));
@@ -293,7 +297,7 @@ export default function App() {
     [closeTab],
   );
 
-  // Drives session disposal off the pane tree, not React lifecycles —
+  // Drives session disposal off the pane tree, not React lifecycles;
   // split/unsplit re-mount components but the leaf is still live.
   const liveLeavesRef = useRef<Set<number>>(new Set());
   useEffect(() => {
@@ -381,7 +385,7 @@ export default function App() {
         return;
       }
       // Dispatch a window event the composer listens for. Same pattern as
-      // selections — keeps file-explorer decoupled from the AI module.
+      // selections; keeps file-explorer decoupled from the AI module.
       window.dispatchEvent(
         new CustomEvent<string>("teraxlyst:ai-attach-file", { detail: path }),
       );
@@ -774,12 +778,30 @@ export default function App() {
                 panelRef={sidebarRef}
                 defaultSize="265px"
                 minSize="170px"
-                maxSize="500px"
+                maxSize="1200px"
                 collapsible
                 collapsedSize={0}
               >
                 <div className="h-full border-r border-border/60">
                   <SidebarTabs
+                    onActiveChange={(id) => {
+                      // Diagram + Canvas need a wide canvas (Mermaid
+                      // SVG / Excalidraw whiteboard). Other tabs are
+                      // narrow nav strips. Track whether WE expanded
+                      // the sidebar so we only shrink what we grew -
+                      // if the user manually dragged it wider, leave
+                      // their preference alone.
+                      const ref = sidebarRef.current;
+                      if (!ref) return;
+                      const isWide = id === "diagram" || id === "canvas";
+                      if (isWide && !sidebarAutoExpandedRef.current) {
+                        ref.resize("900px");
+                        sidebarAutoExpandedRef.current = true;
+                      } else if (!isWide && sidebarAutoExpandedRef.current) {
+                        ref.resize("265px");
+                        sidebarAutoExpandedRef.current = false;
+                      }
+                    }}
                     files={{
                       rootPath: explorerRoot,
                       onOpenFile: handleOpenFile,

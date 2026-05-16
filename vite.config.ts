@@ -13,6 +13,13 @@ export default defineConfig(async ({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  // Mermaid v11 uses lazy dynamic imports that produce extra async
+  // chunks at build time. Tauri's WebView2 chunk lookup can race the
+  // CSP, so we pre-bundle mermaid into a single chunk. Excalidraw is
+  // ESM-only and needs no special handling but lives here for parity.
+  optimizeDeps: {
+    include: ["mermaid", "@excalidraw/excalidraw"],
+  },
   esbuild: {
     drop: mode === "production" ? (["debugger"] as ["debugger"]) : [],
     pure:

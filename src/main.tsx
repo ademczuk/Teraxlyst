@@ -21,12 +21,18 @@ if (USE_CUSTOM_WINDOW_CONTROLS) {
 // Synchronous and non-blocking; wrapped in its own try/catch internally.
 runOneTimeMigration();
 
+// Tell Excalidraw to load fonts from our own /public dir instead of
+// esm.run CDN, which the Tauri CSP `connect-src` does not whitelist.
+// Set before any Excalidraw component mounts.
+(window as unknown as { EXCALIDRAW_ASSET_PATH: string }).EXCALIDRAW_ASSET_PATH =
+  "/";
+
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <App />,
 );
 
 // Window starts hidden (per tauri.conf.json) so users never see a transparent
-// shadow-only frame before React paints. Use setTimeout — rAF is throttled
+// shadow-only frame before React paints. Use setTimeout; rAF is throttled
 // while the window is hidden and would never fire.
 const showWindow = () => {
   getCurrentWindow()

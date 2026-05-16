@@ -2,6 +2,87 @@
 
 All notable changes to Teraxlyst. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/) (pre-`1.0`, minor bumps may include breaking changes).
 
+## [unreleased] - 2026-05-16
+
+Two nimbalyst features ported into Teraxlyst's existing sidebar-tab
+layout, closing part of the feature gap the 4-model audit flagged.
+
+### Added
+
+- `src/app/panels/DiagramPanel.tsx`: Mermaid live diagram editor.
+  Split pane: left textarea for source, right SVG preview. Render is
+  debounced 250 ms. Mermaid is lazy-imported on first tab activation
+  so the initial bundle stays clean (mermaid is ~700 KB gzipped).
+  Uses the dagre layout (default) so no `script-src 'unsafe-eval'`
+  is needed; the existing Teraxlyst CSP is sufficient. Dark theme
+  applied. Persistence not wired yet (diagram source is component
+  state, lost on tab switch).
+- `src/app/panels/CanvasPanel.tsx`: Excalidraw whiteboard. Lazy-loaded
+  via React Suspense. Full toolbar mounts (rectangle, diamond,
+  ellipse, arrow, line, pencil, text, image, eraser, library) plus
+  zoom controls + undo/redo. `theme="dark"` prop applied -
+  `theme--dark` CSS class is on the container; UI chrome darkens
+  correctly. Canvas plane stays the default off-white because
+  `viewBackgroundColor` in `initialData` only applies on first mount
+  (cosmetic; pending follow-up). Drawings not persisted yet.
+- `src/app/SidebarTabs.tsx`: two new tabs (`diagram`, `canvas`) with
+  Flowchart and Canvas icons from `@hugeicons/core-free-icons`. New
+  `onActiveChange` callback so the parent can react to tab switches.
+- `src/app/App.tsx`: sidebar `maxSize` bumped from `500px` to
+  `1200px`. When `diagram` or `canvas` activates, the sidebar
+  auto-expands to `900px`; when the user picks another tab, it
+  shrinks back to `265px`. The expansion is tracked via a ref so
+  manual user drags are not overwritten.
+- `src/main.tsx`: sets `window.EXCALIDRAW_ASSET_PATH = "/"` before
+  React mounts so Excalidraw self-hosts fonts from `/public` instead
+  of fetching them from the esm.run CDN (which the Tauri CSP
+  `connect-src` does not whitelist).
+- `vite.config.ts`: `optimizeDeps.include: ["mermaid",
+  "@excalidraw/excalidraw"]` pre-bundles both to avoid Vite emitting
+  dynamic chunks that race the Tauri CSP on chunk fetch.
+
+### Visual QA (Chrome MCP, dev server at localhost:1420)
+
+- Diagram tab: Mermaid SVG renders the sample flowchart correctly
+  with `dagre` layout in dark theme. No CSP violations. Live update
+  on source edit verified.
+- Canvas tab: Excalidraw mounts with full toolbar visible. Help
+  tooltip "To move canvas, hold mouse wheel or spacebar while
+  dragging" displays. Zoom + undo/redo controls present.
+- Sidebar auto-expand: confirmed to grow from `265px` to `900px`
+  when entering Diagram/Canvas and shrink back when leaving.
+- No new console errors from either package. Pre-existing errors
+  (`openPty failed`, `transformCallback`) come from running the
+  frontend bare in a browser without Tauri's IPC layer; they vanish
+  under `pnpm tauri dev`.
+
+### Tests
+
+- 38 Rust tests + 9 frontend vitest tests still pass.
+- `pnpm exec tsc --noEmit`: clean.
+- `pnpm build`: clean. Mermaid added a 607 KB chunk
+  (`mermaid.core-*.js`, 145 KB gzipped) plus 612 KB
+  `wardley-*.js` (145 KB gzipped, lazy). Excalidraw added a 1054 KB
+  chunk (344 KB gzipped). All under the 1500 KB warning except
+  shared subset (1820 KB / 736 KB gzipped) which was already there.
+
+### Not yet ported
+
+- Lexical WYSIWYG editor (the biggest remaining nimbalyst feature)
+- iOS SwiftUI mobile companion
+- AGPL-3.0 real-time collab server
+- PGLite Postgres-in-WASM (current backend is rusqlite, not WASM)
+
+### Honest delta vs the 4-model audit
+
+The audit said the fork was not worthwhile as a product because the
+feature gap was too wide and the moving target too fast. Porting
+Mermaid + Excalidraw closes part of the gap but does not invalidate
+the audit's reasoning: nimbalyst still ships WYSIWYG + mobile +
+collab that Teraxlyst does not. The right way to read this entry is
+"reducing the gap from huge to large", not "Teraxlyst now equivalent
+to nimbalyst."
+
 ## [0.1.0-rc4] - 2026-05-16
 
 Post-rc3 audit pass. Security advisory cleanup + release manifest
