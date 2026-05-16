@@ -67,25 +67,89 @@ pub fn spawn_claude_code(
 
 // Parse a single stdout line into an event.
 //
-// M2.0 stub: every non-empty line becomes AssistantText. The empty case
-// returns None so we don't write blanks to the DB.
+// M2.1 heuristic (still needs validation against real Claude Code output
+// samples - see M2.2 TODO): inspect known marker prefixes / substrings and
+// route the line to the closest TranscriptEvent variant. Anything that
+// doesn't match a marker becomes AssistantText, matching the M2.0 default.
 //
-// TODO(M2.1): real parsing. The Claude Code CLI emits a mix of plain text,
-// tool-call markers, permission prompts, and exit status. Once we have real
-// output samples we'll detect:
-//   - lines starting with "tool_call:" or JSON envelopes  -> ToolCall
-//   - lines starting with "tool_result:"                   -> ToolResult
-//   - permission-prompt envelopes                          -> SystemNotice + a
-//     follow-up MCP prompt_for_user_input round-trip (M3)
-//   - non-zero exit lines / "Error:" prefix                -> Error
+// Marker rules (case-insensitive on the leading token where noted):
+//   - "[tool_call]" or "tool_use:" prefix    -> ToolCall (name = first word
+//     after the marker; args left empty until M2.2 introduces JSON envelopes)
+//   - "[error]" / "error:" / "Error:" prefix -> Error
+//   - line contains "permission_request" or "awaiting_approval" anywhere
+//     -> SystemNotice (preserving the original text)
+//   - empty (after trim)                     -> None (don't write blanks)
+//   - anything else                          -> AssistantText
+//
+// TODO(M2.2): cross-check against captured Claude Code stdout samples;
+// promote the JSON-envelope branches once we know the actual format. The
+// permission-prompt path will round-trip through the MCP prompt pipeline
+// (M3) once that bridge lands.
 pub fn parse_line(line: &str) -> Option<TranscriptEvent> {
     let trimmed = line.trim_end_matches(['\r', '\n']);
     if trimmed.is_empty() {
         return None;
     }
+
+    // Tool-call markers. Synthesize the name from the first whitespace-
+    // separated token after the prefix, falling back to "unknown".
+    if let Some(rest) = strip_prefix_ci(trimmed, "[tool_call]") {
+        return Some(TranscriptEvent::ToolCall {
+            name: first_word(rest).unwrap_or("unknown").to_string(),
+            args: serde_json::Value::Null,
+        });
+    }
+    if let Some(rest) = strip_prefix_ci(trimmed, "tool_use:") {
+        return Some(TranscriptEvent::ToolCall {
+            name: first_word(rest).unwrap_or("unknown").to_string(),
+            args: serde_json::Value::Null,
+        });
+    }
+
+    // Error markers. Case-sensitive on "Error:" because the lowercase form
+    // is matched by the "error:" branch; both routes land here.
+    if starts_with_ci(trimmed, "[error]")
+        || starts_with_ci(trimmed, "error:")
+    {
+        return Some(TranscriptEvent::Error {
+            text: trimmed.to_string(),
+        });
+    }
+
+    // Permission / approval prompts. Substring match because real samples
+    // wrap these in JSON envelopes whose exact key path we haven't pinned
+    // down yet. The whole line is preserved so the renderer can pretty-print.
+    let lower = trimmed.to_ascii_lowercase();
+    if lower.contains("permission_request") || lower.contains("awaiting_approval") {
+        return Some(TranscriptEvent::SystemNotice {
+            text: trimmed.to_string(),
+        });
+    }
+
     Some(TranscriptEvent::AssistantText {
         text: trimmed.to_string(),
     })
+}
+
+// Case-insensitive strip_prefix that returns the suffix on a match.
+fn strip_prefix_ci<'a>(text: &'a str, prefix: &str) -> Option<&'a str> {
+    if text.len() < prefix.len() {
+        return None;
+    }
+    let head = &text[..prefix.len()];
+    if head.eq_ignore_ascii_case(prefix) {
+        Some(&text[prefix.len()..])
+    } else {
+        None
+    }
+}
+
+fn starts_with_ci(text: &str, prefix: &str) -> bool {
+    strip_prefix_ci(text, prefix).is_some()
+}
+
+fn first_word(text: &str) -> Option<&str> {
+    text.trim_start().split_whitespace().next()
 }
 
 #[cfg(test)]
@@ -103,6 +167,39 @@ mod tests {
     fn parse_text_line_returns_assistant_text() {
         match parse_line("hello world\n") {
             Some(TranscriptEvent::AssistantText { text }) => assert_eq!(text, "hello world"),
+            other => panic!("unexpected event: {:?}", other),
+        }
+    }
+
+    #[test]
+    fn parse_tool_call_marker_returns_tool_call() {
+        match parse_line("[tool_call] bash --version\n") {
+            Some(TranscriptEvent::ToolCall { name, .. }) => assert_eq!(name, "bash"),
+            other => panic!("unexpected event: {:?}", other),
+        }
+        match parse_line("tool_use: read_file path/to/x\n") {
+            Some(TranscriptEvent::ToolCall { name, .. }) => assert_eq!(name, "read_file"),
+            other => panic!("unexpected event: {:?}", other),
+        }
+    }
+
+    #[test]
+    fn parse_error_marker_returns_error() {
+        for line in ["[error] boom", "error: boom", "Error: boom"] {
+            match parse_line(line) {
+                Some(TranscriptEvent::Error { .. }) => {}
+                other => panic!("unexpected event for {}: {:?}", line, other),
+            }
+        }
+    }
+
+    #[test]
+    fn parse_permission_request_returns_system_notice() {
+        let line = "{\"type\":\"permission_request\",\"tool\":\"shell\"}";
+        match parse_line(line) {
+            Some(TranscriptEvent::SystemNotice { text }) => {
+                assert!(text.contains("permission_request"));
+            }
             other => panic!("unexpected event: {:?}", other),
         }
     }

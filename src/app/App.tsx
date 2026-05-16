@@ -41,9 +41,9 @@ import {
   type SearchInlineHandle,
   type SearchTarget,
 } from "@/modules/header";
-// TODO(M5.1): wire DiffInbox into a panel/route. Import removed to satisfy
-// tsc --noEmit; module exports remain reachable from elsewhere.
-// import { DiffInbox } from "@/modules/diff";
+// M5.1: DiffInbox mounted behind a toggle button (mirrors the Sessions
+// overlay below). A richer routed panel can come in M5.2.
+import { DiffInbox } from "@/modules/diff";
 import { PreviewStack, type PreviewPaneHandle } from "@/modules/preview";
 import { SessionList } from "@/modules/sessions";
 import { openSettingsWindow } from "@/modules/settings/openSettingsWindow";
@@ -187,6 +187,7 @@ export default function App() {
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [newEditorOpen, setNewEditorOpen] = useState(false);
   const [sessionsOpen, setSessionsOpen] = useState(false);
+  const [diffsOpen, setDiffsOpen] = useState(false);
   const miniOpen = useChatStore((s) => s.mini.open);
   const openMini = useChatStore((s) => s.openMini);
   const focusInput = useChatStore((s) => s.focusInput);
@@ -944,6 +945,22 @@ export default function App() {
           {sessionsOpen ? (
             <div className="fixed bottom-20 right-3 z-40 flex h-[60vh] w-[360px] flex-col overflow-hidden rounded border border-border bg-card shadow-lg">
               <SessionList />
+            </div>
+          ) : null}
+
+          {/* M5.1: Diff Inbox overlay. Same pattern as Sessions; richer
+              routing/panel integration arrives in M5.2. */}
+          <button
+            type="button"
+            onClick={() => setDiffsOpen((v) => !v)}
+            className="fixed bottom-10 right-32 z-40 rounded border border-border bg-background px-3 py-1 text-xs shadow-sm"
+            title="Toggle diff inbox panel"
+          >
+            {diffsOpen ? "Hide diffs" : "Diffs"}
+          </button>
+          {diffsOpen ? (
+            <div className="fixed bottom-20 right-32 z-40 flex h-[60vh] w-[520px] flex-col overflow-hidden rounded border border-border bg-card shadow-lg">
+              <DiffInbox />
             </div>
           ) : null}
 

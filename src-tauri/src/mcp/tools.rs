@@ -175,4 +175,7 @@ fn reject_parent_traversal(rel: &str) -> Result<(), McpError> {
 }
 
 // Re-export Arc<TeraxlystToolset> alias so server.rs has a tidy name.
+// Reserved for M3.2 wiring (in-process AI session loops grabbing the
+// toolset); the renderer reaches the pipelines via the Tauri commands.
+#[allow(dead_code)]
 pub type SharedToolset = Arc<TeraxlystToolset>;

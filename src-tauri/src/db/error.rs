@@ -9,6 +9,10 @@ pub enum DbError {
     Sqlite(#[from] rusqlite::Error),
     #[error("serde: {0}")]
     Serde(#[from] serde_json::Error),
+    // Reserved for path/file errors when the DB takes on filesystem
+    // probing (planning/ROADMAP.md M1.1). Stable surface, no current path
+    // hits it under v1 sqlite-only writes.
+    #[allow(dead_code)]
     #[error("io: {0}")]
     Io(#[from] std::io::Error),
     #[error("not found: {0}")]

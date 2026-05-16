@@ -3,7 +3,9 @@
 // Status: scaffold. These functions are the business-logic core of the
 // four MCP tools (tracker_create_item, tracker_update_item,
 // tracker_list_items, tracker_query) ready to be wired into rmcp's
-// `#[tool_router]` once the MCP toolset gets DbHandle access.
+// `#[tool_router]` once the MCP toolset gets DbHandle access. Kept
+// alive deliberately; M3.2 will register them via TeraxlystToolset.
+#![allow(dead_code)]
 //
 // Registration TODO: extend mcp::tools::TeraxlystToolset with a DbHandle
 // field (alongside prompts + diffs), then add `#[tool]` methods that

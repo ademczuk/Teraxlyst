@@ -175,13 +175,21 @@ impl SessionManager {
         // window even on fast streams.
         let (line_tx, line_rx) = mpsc::channel::<TranscriptEvent>(1024);
 
+        // The watcher gets its own sender clone so it can push the
+        // Completed marker through the SAME channel the reader uses,
+        // serialized behind any pending stdout events. See
+        // spawn_child_watcher for ordering rationale.
+        let watcher_tx = line_tx.clone();
+
         // Reader task: blocking std::io reads of stdout, parse each line,
         // forward via the mpsc channel. spawn_blocking because Read on a
         // ChildStdout is synchronous.
         let reader_handle = spawn_stdout_reader(stdout, line_tx);
 
         // Flush task: drain the channel in 50ms windows, write each event to
-        // the DB and emit a batched event to the renderer.
+        // the DB and emit a batched event to the renderer. Once both the
+        // reader and the watcher have dropped their senders the channel
+        // closes and the flusher does its terminal flush + exit.
         let flusher_handle = spawn_event_flusher(
             session.id,
             line_rx,
@@ -189,20 +197,23 @@ impl SessionManager {
             app_handle.clone(),
         );
 
-        // Watcher task: when the child exits, emit a Completed event and
-        // remove the session from the registry so list_running goes empty.
+        // Watcher task: owns reader_handle so it can AWAIT it before
+        // enqueueing Completed. This guarantees every stdout line is in
+        // the channel ahead of the marker. On kill we abort the watcher,
+        // which cancels both the wait and the reader-join; the reader
+        // task itself exits naturally as the killed child closes stdout.
         let watcher_handle = spawn_child_watcher(
             session.id,
             child.clone(),
-            db.clone(),
-            app_handle.clone(),
+            watcher_tx,
+            reader_handle,
             Arc::clone(&self.registry),
         );
 
         let running = RunningSession {
             provider,
             child,
-            tasks: vec![reader_handle, flusher_handle, watcher_handle],
+            tasks: vec![flusher_handle, watcher_handle],
         };
 
         let mut reg = self.registry.lock().await;
@@ -343,14 +354,23 @@ async fn flush<R: Runtime>(
     let _ = app_handle.emit(EVENT_EMIT_NAME, batch);
 }
 
-// Watcher: hands the sync child.wait() to spawn_blocking, then resumes on
-// the async runtime to emit + prune. Two-stage so we never call block_on
-// inside a blocking pool worker.
-fn spawn_child_watcher<R: Runtime>(
+// Watcher: hands the sync child.wait() to spawn_blocking, awaits the
+// stdout-reader to fully drain, then enqueues the Completed marker
+// through the flusher channel and prunes the registry entry.
+//
+// M2.1 race-fix: previously the watcher wrote Completed directly to the
+// DB, racing the flusher's pending batch (and on Linux, racing the
+// reader's final pipe-drain after `child.wait()` returns). The new
+// design serializes everything through the flusher channel by (a)
+// awaiting the reader handle so every stdout line is enqueued first,
+// then (b) sending Completed via the shared sender. The flusher sees
+// Completed last and, once both senders are dropped, runs its terminal
+// flush + exit.
+fn spawn_child_watcher(
     session_id: i64,
     child: Arc<SharedChild>,
-    db: DbHandle,
-    app_handle: AppHandle<R>,
+    tx: mpsc::Sender<TranscriptEvent>,
+    reader_handle: JoinHandle<()>,
     registry: Arc<Mutex<HashMap<i64, RunningSession>>>,
 ) -> JoinHandle<()> {
     tokio::spawn(async move {
@@ -361,21 +381,20 @@ fn spawn_child_watcher<R: Runtime>(
         // We discard the actual ExitStatus; v1 just records Completed.
         let _ = wait_result;
 
-        let event = TranscriptEvent::Completed;
-        let _ = db
-            .append_event(
-                session_id,
-                event.db_kind().to_string(),
-                event.db_payload(),
-            )
-            .await;
-        let _ = app_handle.emit(
-            EVENT_EMIT_NAME,
-            SessionEventBatch {
-                session_id,
-                events: vec![event],
-            },
-        );
+        // Reader exits when the child's stdout pipe closes (at or after
+        // exit). Awaiting its JoinHandle guarantees every parsed line is
+        // already queued in the channel before we push Completed.
+        // JoinError on cancellation/panic is intentionally ignored - the
+        // marker still represents "child is no longer running" either way.
+        let _ = reader_handle.await;
+
+        // Enqueue Completed. send() awaits if the channel is full, which
+        // is fine - we are happy to backpressure the watcher here.
+        let _ = tx.send(TranscriptEvent::Completed).await;
+        // Drop our sender so the flusher's recv() returns None once the
+        // queue drains, triggering its terminal flush + exit.
+        drop(tx);
+
         // Drop the registry entry. The kill() path may have already
         // removed it; remove is idempotent.
         registry.lock().await.remove(&session_id);

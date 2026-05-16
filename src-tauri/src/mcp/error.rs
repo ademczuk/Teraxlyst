@@ -10,6 +10,10 @@ pub enum McpError {
     Db(#[from] DbError),
     #[error("io: {0}")]
     Io(#[from] std::io::Error),
+    // Reserved for tool argument parsing (M3.2 rmcp wire-format wiring);
+    // current paths use typed handlers so serde_json failures are caught
+    // upstream.
+    #[allow(dead_code)]
     #[error("serde: {0}")]
     Serde(#[from] serde_json::Error),
     #[error("emit failed: {0}")]

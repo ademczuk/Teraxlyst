@@ -32,6 +32,9 @@ pub struct McpHandle {
 }
 
 // Re-export `McpToolset` as an alias so external callers can name it.
+// Kept for M3.2 (stdio bridge, in-process AI sessions reaching the toolset
+// directly); currently the renderer hits the pipelines via the commands.
+#[allow(dead_code)]
 pub type McpToolset = Arc<TeraxlystToolset>;
 
 // Build the in-process toolset, wire emitters to the live AppHandle, and

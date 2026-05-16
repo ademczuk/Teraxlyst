@@ -1,14 +1,5 @@
 // MCP host. See planning/ARCHITECTURE.md sections 5 + 11.
 //
-// M3 scaffold landed without the final wire-up to lib.rs (sub-agent
-// was rate-limited mid-task). Types, pipelines, and tools are
-// defined and individually correct, but the lib.rs setup closure
-// does not yet construct an McpHandle. clippy -D warnings would
-// reject the module-wide dead code. Allow it until M3.1 wires
-// spawn_in_process(...) into lib.rs setup.
-#![allow(dead_code)]
-
-//
 // M3 scope (intentionally narrow):
 // - One in-process MCP server with THREE tools:
 //     * prompt_for_user_input  - emit UI form to renderer, await response

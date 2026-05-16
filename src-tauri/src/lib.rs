@@ -158,6 +158,11 @@ pub fn run() {
             mcp::commands::mcp_prompt_response,
             mcp::commands::mcp_diff_resolve,
             mcp::commands::mcp_list_pending_prompts,
+            trackers::commands::tracker_load_workspace,
+            trackers::commands::tracker_create_item,
+            trackers::commands::tracker_update_item,
+            trackers::commands::tracker_list_items,
+            trackers::commands::tracker_query,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

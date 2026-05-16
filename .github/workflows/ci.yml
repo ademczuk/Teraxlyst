@@ -77,14 +77,9 @@ jobs:
         working-directory: src-tauri
         run: cargo check --all-targets
 
-      # -D warnings was temporarily relaxed in 0.1.0-pre.6: M3+M4+M5
-      # modules shipped scaffold-only (sub-agents rate-limited before
-      # lib.rs wireup), and clippy correctly flags the unreachable
-      # surface. Re-enable -D warnings after M3.1/M4.1/M5.1 land the
-      # invoke_handler registrations.
       - name: cargo clippy
         working-directory: src-tauri
-        run: cargo clippy --all-targets
+        run: cargo clippy --all-targets -- -D warnings
 
       - name: cargo test
         working-directory: src-tauri

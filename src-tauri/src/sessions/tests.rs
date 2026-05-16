@@ -84,13 +84,13 @@ async fn session_lifecycle_writes_events_to_db() {
         drained += step;
     }
 
-    // Core M2 contract: events flow from the subprocess into the DB. We
-    // require the prompt (UserMessage) plus at least one stdout line as
-    // an AssistantText event. The Completed marker is best-effort in M2.0;
-    // M2.1 will tighten the watcher-to-DB synchronization.
+    // M2.1: with the watcher pushing Completed through the flusher
+    // channel instead of writing directly, the marker is deterministic.
+    // We require the prompt (UserMessage) plus at least one stdout line
+    // (AssistantText) and the Completed marker as the LAST event.
     assert!(
-        events.len() >= 2,
-        "expected at least 2 events (prompt + >=1 echo line), got {}: {:?}",
+        events.len() >= 3,
+        "expected >=3 events (prompt + >=1 echo line + completed), got {}: {:?}",
         events.len(),
         events.iter().map(|e| &e.kind).collect::<Vec<_>>()
     );
@@ -99,6 +99,12 @@ async fn session_lifecycle_writes_events_to_db() {
     assert!(
         kinds.contains(&"assistant"),
         "expected an assistant event: {:?}",
+        kinds
+    );
+    assert_eq!(
+        kinds.last().copied(),
+        Some("completed"),
+        "Completed marker must be the last event: {:?}",
         kinds
     );
 }
