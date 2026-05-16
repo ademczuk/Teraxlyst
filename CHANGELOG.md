@@ -2,6 +2,55 @@
 
 All notable changes to Teraxlyst. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/) (pre-`1.0`, minor bumps may include breaking changes).
 
+## [unreleased] - 2026-05-16
+
+Post-rc3 audit pass. Will land in rc4 on the next tag.
+
+### Fixed (security: 21 prod advisories -> 0)
+
+- `package.json`: moved `shadcn` from `dependencies` to
+  `devDependencies`. shadcn is a build-time CLI that scaffolds UI
+  components into `src/components/ui/*.tsx`; nothing it ships is
+  loaded at runtime. Misclassification was inherited from upstream
+  terax-ai. Cleared 8 advisories along the
+  `shadcn>@modelcontextprotocol/sdk>{ajv>fast-uri,hono,
+  express-rate-limit>ip-address}` chain, including both `high`
+  fast-uri items (path traversal + host confusion via
+  percent-encoded URIs).
+- `package.json` pnpm.overrides: pinned `dompurify` to `^3.4.0`.
+  monaco-editor still bundles a pre-3.4 dompurify transitively;
+  the override forces the patched version across the dep graph.
+  Cleared 8 moderate dompurify advisories (XSS via mutation,
+  ADD_ATTR predicate skip, USE_PROFILES prototype pollution,
+  SAFE_FOR_TEMPLATES bypass, FORBID_TAGS bypass, etc). dompurify
+  is reachable from the M5 diff viewer (Monaco renders proposed
+  diffs).
+- `pnpm up @monaco-editor/react@latest streamdown@latest` to pick
+  up the latest published versions matching the override.
+
+### Fixed (build hygiene)
+
+- `.github/workflows/release.yml`: SHA256SUMS files now list
+  user-facing installers only (`.deb` / `.rpm` / `.AppImage` /
+  `.dmg` / `.app.tar.gz` / `.exe`). rc3 manifests on the macOS
+  side contained tauri-bundler internal scaffolding
+  (`share/create-dmg/support/template.applescript`,
+  `dmg/bundle_dmg.sh`, the unpacked `.app/` tree) that users have
+  no way to verify against the artifacts they download.
+- 6 dead-code warnings cleared on the Windows test build by gating
+  the cfg(unix)-only imports + the create_with_program test seam
+  to mirror their consumers. `cargo test --lib --locked` now
+  emits zero warnings (was 6).
+
+### Verified
+
+- 21 prod advisories -> 0 via `pnpm audit --prod`.
+- 9/9 frontend vitest tests pass.
+- `pnpm exec tsc --noEmit`: clean.
+- `pnpm build`: clean, 8.84s, full dist output.
+- 38/38 Rust tests pass with `cargo test --lib --locked`.
+- `cargo clippy --all-targets --locked -- -D warnings`: clean.
+
 ## [0.1.0-rc3] - 2026-05-16
 
 First multi-platform release candidate. M2.2 (real Claude CLI parser),
