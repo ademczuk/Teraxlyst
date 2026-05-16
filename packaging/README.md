@@ -6,9 +6,9 @@ Community-driven distribution templates. None of these require paid signing cert
 
 `scoop/teraxlyst.json` is the manifest for the Scoop bucket. To publish:
 
-1. Cut a Teraxlyst release as documented in `docs/RELEASE.md`. The release workflow uploads `Teraxlyst_<version>_x64_en-US.msi` and `SHA256SUMS-windows.txt`.
+1. Cut a Teraxlyst release as documented in `docs/RELEASE.md`. The release workflow uploads `Teraxlyst_<version>_x64-setup.exe` (NSIS) and `SHA256SUMS-windows.txt`. MSI is intentionally not produced because the Tauri MSI bundler rejects string pre-release identifiers like `rc2`; NSIS handles full semver.
 2. Copy `scoop/teraxlyst.json` into your `ademczuk/scoop-bucket` repo as `bucket/teraxlyst.json`.
-3. Replace `PLACEHOLDER_SHA256_REPLACE_AT_RELEASE_TIME` with the actual SHA256 from `SHA256SUMS-windows.txt` for the MSI line.
+3. Replace `PLACEHOLDER_SHA256_REPLACE_AT_RELEASE_TIME` with the actual SHA256 from `SHA256SUMS-windows.txt` for the NSIS `-setup.exe` line.
 4. Users then run:
    ```powershell
    scoop bucket add ademczuk https://github.com/ademczuk/scoop-bucket

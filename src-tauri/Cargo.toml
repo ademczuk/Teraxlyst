@@ -1,6 +1,6 @@
 [package]
 name = "teraxlyst"
-version = "0.1.0-rc2"
+version = "0.1.0-rc3"
 description = "Teraxlyst: a desktop workspace for AI coding agents. Forked from terax-ai v0.6.5."
 authors = ["ademczuk"]
 edition = "2021"

@@ -8,7 +8,7 @@ The release pipeline at `.github/workflows/release.yml` fires on `v*` tag push a
 
 | Platform | Bundle | Signed? | Warning |
 |---|---|---|---|
-| Windows x64 | NSIS `.exe` installer, MSI | No (or self-signed) | SmartScreen "Windows protected your PC" until reputation builds |
+| Windows x64 | NSIS `.exe` installer | No (or self-signed) | SmartScreen "Windows protected your PC" until reputation builds |
 | macOS Apple Silicon | `.app.tar.gz`, `.dmg` | Ad-hoc only | Right-click then Open on first launch |
 | macOS Intel | `.app.tar.gz`, `.dmg` | Ad-hoc only | Right-click then Open on first launch |
 | Linux x64 | `.deb`, `.rpm`, AppImage | No | None |

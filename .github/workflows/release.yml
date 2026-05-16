@@ -214,4 +214,3 @@ jobs:
         with:
           subject-path: |
             src-tauri/target/release/bundle/**/*.exe
-            src-tauri/target/release/bundle/**/*.msi

@@ -4,22 +4,22 @@
   "description": "Desktop workspace for AI coding agents. Tauri 2 + Rust + React.",
   "homepage": "https://github.com/ademczuk/Teraxlyst",
   "license": "Apache-2.0",
-  "url": "https://github.com/ademczuk/Teraxlyst/releases/download/v0.1.0/Teraxlyst_0.1.0_x64_en-US.msi",
+  "url": "https://github.com/ademczuk/Teraxlyst/releases/download/v0.1.0/Teraxlyst_0.1.0_x64-setup.exe",
   "hash": "PLACEHOLDER_SHA256_REPLACE_AT_RELEASE_TIME",
-  "extract_dir": "Teraxlyst",
   "installer": {
     "script": [
-      "msiexec /i \"$dir\\Teraxlyst_0.1.0_x64_en-US.msi\" /quiet /norestart"
+      "Start-Process -FilePath \"$dir\\Teraxlyst_0.1.0_x64-setup.exe\" -ArgumentList @('/S') -Wait"
     ]
   },
   "uninstaller": {
     "script": [
-      "msiexec /x \"{com.ademczuk.teraxlyst}\" /quiet /norestart"
+      "$uninst = Join-Path $env:LOCALAPPDATA 'Teraxlyst\\uninstall.exe'",
+      "if (Test-Path $uninst) { Start-Process -FilePath $uninst -ArgumentList @('/S') -Wait }"
     ]
   },
   "shortcuts": [
     [
-      "$env:LOCALAPPDATA\\Programs\\Teraxlyst\\Teraxlyst.exe",
+      "$env:LOCALAPPDATA\\Teraxlyst\\Teraxlyst.exe",
       "Teraxlyst"
     ]
   ],
@@ -27,7 +27,7 @@
     "github": "https://github.com/ademczuk/Teraxlyst"
   },
   "autoupdate": {
-    "url": "https://github.com/ademczuk/Teraxlyst/releases/download/v$version/Teraxlyst_$version_x64_en-US.msi",
+    "url": "https://github.com/ademczuk/Teraxlyst/releases/download/v$version/Teraxlyst_$version_x64-setup.exe",
     "hash": {
       "url": "https://github.com/ademczuk/Teraxlyst/releases/download/v$version/SHA256SUMS-windows.txt"
     }
