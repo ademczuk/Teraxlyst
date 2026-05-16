@@ -34,7 +34,16 @@ use crate::db::actor::DbHandle;
 use crate::db::types::Session;
 
 use super::error::ManagerError;
-use super::provider_claude_code::{parse_line, spawn_claude_code};
+use super::provider_claude_code::{
+    parse_line as parse_line_claude, spawn_claude_code,
+};
+use super::provider_codex::{parse_line as parse_line_codex, spawn_codex};
+use super::provider_gemini::{parse_line as parse_line_gemini, spawn_gemini};
+use super::provider_kimi::{parse_line as parse_line_kimi, spawn_kimi};
+
+// Function-pointer alias so spawn_stdout_reader can dispatch to the
+// per-provider line parser without an enum match per line.
+type ParseFn = fn(&str) -> Option<TranscriptEvent>;
 use super::types::{Provider, SessionEventBatch, TranscriptEvent};
 
 const EVENT_EMIT_NAME: &str = "teraxlyst:session-events";
@@ -154,18 +163,39 @@ impl SessionManager {
             );
         }
 
-        // Spawn the subprocess. The provider module handles the bin choice
-        // and the test override (which we adapt into &str/&[&str] borrows
-        // before calling).
-        let child = if let Some((program, args)) = program_override.as_ref() {
+        // Spawn the subprocess via the right provider adapter, and
+        // pick the matching line parser so stdout gets routed
+        // correctly. A test program_override always goes through the
+        // Claude-style parser since the test stub mimics that shape.
+        let (child, parse_fn): (_, ParseFn) = if let Some((program, args)) = program_override.as_ref() {
             let arg_refs: Vec<&str> = args.iter().map(String::as_str).collect();
-            spawn_claude_code(
-                &workspace_path,
-                &prompt,
-                Some((program.as_str(), arg_refs.as_slice())),
-            )?
+            (
+                spawn_claude_code(
+                    &workspace_path,
+                    &prompt,
+                    Some((program.as_str(), arg_refs.as_slice())),
+                )?,
+                parse_line_claude,
+            )
         } else {
-            spawn_claude_code(&workspace_path, &prompt, None)?
+            match provider {
+                Provider::ClaudeCode => (
+                    spawn_claude_code(&workspace_path, &prompt, None)?,
+                    parse_line_claude,
+                ),
+                Provider::Codex => (
+                    spawn_codex(&workspace_path, &prompt, None)?,
+                    parse_line_codex,
+                ),
+                Provider::Gemini => (
+                    spawn_gemini(&workspace_path, &prompt, None)?,
+                    parse_line_gemini,
+                ),
+                Provider::Kimi => (
+                    spawn_kimi(&workspace_path, &prompt, None)?,
+                    parse_line_kimi,
+                ),
+            }
         };
 
         let stdout = child
@@ -185,8 +215,9 @@ impl SessionManager {
 
         // Reader task: blocking std::io reads of stdout, parse each line,
         // forward via the mpsc channel. spawn_blocking because Read on a
-        // ChildStdout is synchronous.
-        let reader_handle = spawn_stdout_reader(stdout, line_tx);
+        // ChildStdout is synchronous. parse_fn is the provider-specific
+        // parser selected above.
+        let reader_handle = spawn_stdout_reader(stdout, line_tx, parse_fn);
 
         // Flush task: drain the channel in 50ms windows, write each event to
         // the DB and emit a batched event to the renderer. Once both the
@@ -258,6 +289,7 @@ impl SessionManager {
 fn spawn_stdout_reader(
     mut stdout: ChildStdout,
     tx: mpsc::Sender<TranscriptEvent>,
+    parse_fn: ParseFn,
 ) -> JoinHandle<()> {
     tokio::task::spawn_blocking(move || {
         let mut buf = [0u8; 4096];
@@ -273,7 +305,7 @@ fn spawn_stdout_reader(
             while let Some(idx) = leftover.iter().position(|b| *b == b'\n') {
                 let line: Vec<u8> = leftover.drain(..=idx).collect();
                 let line_str = String::from_utf8_lossy(&line);
-                if let Some(event) = parse_line(line_str.as_ref()) {
+                if let Some(event) = parse_fn(line_str.as_ref()) {
                     // blocking_send because we're in a spawn_blocking thread.
                     // If the receiver is gone (manager dropped) we exit.
                     if tx.blocking_send(event).is_err() {
@@ -285,7 +317,7 @@ fn spawn_stdout_reader(
         // Emit any final non-newline-terminated line.
         if !leftover.is_empty() {
             let line_str = String::from_utf8_lossy(&leftover);
-            if let Some(event) = parse_line(line_str.as_ref()) {
+            if let Some(event) = parse_fn(line_str.as_ref()) {
                 let _ = tx.blocking_send(event);
             }
         }

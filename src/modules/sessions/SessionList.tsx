@@ -56,6 +56,15 @@ export function SessionList(){
   const [prompt, setPrompt] = useState<string>("");
   const [creating, setCreating] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  // Which CLI to spawn. claude-code is the default; codex / gemini /
+  // kimi are the "plastic pipes" fallbacks for when Claude OAuth is
+  // throttled. All four are OAuth-authenticated CLIs; no API keys.
+  // The user authenticates each CLI once (`claude login`, `codex
+  // login`, `gemini auth login`, `kimi login`); Teraxlyst spawns
+  // reuse those tokens.
+  const [provider, setProvider] = useState<
+    "claude-code" | "codex" | "gemini" | "kimi"
+  >("claude-code");
   // Tick once per 30s so the rate-limit countdown banner refreshes
   // without re-rendering the whole transcript on every frame.
   const [now, setNow] = useState<number>(() => Date.now());
@@ -110,7 +119,7 @@ export function SessionList(){
     try {
       await createSession({
         workspaceId: activeWorkspace.id,
-        provider: "claude-code",
+        provider,
         prompt,
       });
       setPrompt("");
@@ -119,7 +128,7 @@ export function SessionList(){
     } finally {
       setCreating(false);
     }
-  }, [activeWorkspace, prompt, createSession]);
+  }, [activeWorkspace, prompt, provider, createSession]);
 
   const handleKill = useCallback(
     async (id: number) => {
@@ -229,14 +238,36 @@ export function SessionList(){
           onChange={(e) => setPrompt(e.target.value)}
           placeholder="What should the agent do?"
         />
-        <button
-          type="button"
-          disabled={creating || !activeWorkspace}
-          className="self-start rounded border border-border bg-primary px-3 py-1 text-xs text-primary-foreground disabled:opacity-50"
-          onClick={() => void handleCreate()}
-        >
-          {creating ? "Starting..." : "Start session"}
-        </button>
+        <div className="flex items-center gap-2">
+          <label
+            className="text-xs text-muted-foreground"
+            htmlFor="session-provider"
+          >
+            Provider
+          </label>
+          <select
+            id="session-provider"
+            value={provider}
+            onChange={(e) =>
+              setProvider(e.target.value as typeof provider)
+            }
+            className="rounded border border-border bg-background px-2 py-1 text-xs"
+            data-testid="session-provider"
+          >
+            <option value="claude-code">Claude (claude CLI, OAuth)</option>
+            <option value="codex">Codex (OpenAI CLI, OAuth)</option>
+            <option value="gemini">Gemini (Google CLI, OAuth)</option>
+            <option value="kimi">Kimi (Moonshot CLI, OAuth)</option>
+          </select>
+          <button
+            type="button"
+            disabled={creating || !activeWorkspace}
+            className="rounded border border-border bg-primary px-3 py-1 text-xs text-primary-foreground disabled:opacity-50"
+            onClick={() => void handleCreate()}
+          >
+            {creating ? "Starting..." : "Start session"}
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-col gap-2">

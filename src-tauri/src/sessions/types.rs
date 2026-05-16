@@ -65,22 +65,27 @@ impl TranscriptEvent {
     }
 }
 
-// Provider tag. v1 ships ClaudeCode only; Codex + Opencode are placeholders.
+// Provider tag. All four are OAuth-only; no API key path exists.
+// ClaudeCode is the M2 primary; Codex / Gemini / Kimi are the
+// "plastic pipes" fallbacks for when Claude OAuth is rate-limited.
 // Kept as an enum (vs a string) so adding a provider is a compile-time
 // exhaustiveness signal in the manager + parser.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
 pub enum Provider {
     ClaudeCode,
-    // M2.1+:
-    // Codex,
-    // Opencode,
+    Codex,
+    Gemini,
+    Kimi,
 }
 
 impl Provider {
     pub fn as_db_str(&self) -> &'static str {
         match self {
             Provider::ClaudeCode => "claude-code",
+            Provider::Codex => "codex",
+            Provider::Gemini => "gemini",
+            Provider::Kimi => "kimi",
         }
     }
 }

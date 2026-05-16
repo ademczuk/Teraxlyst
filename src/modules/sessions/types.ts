@@ -13,9 +13,11 @@ export type TranscriptEvent =
   | { type: "error"; text: string }
   | { type: "completed" };
 
-// Provider tag. Matches Rust's #[serde(rename_all = "kebab-case")] on the
-// Provider enum.
-export type Provider = "claude-code";
+// Provider tag. Matches Rust's #[serde(rename_all = "kebab-case")] on
+// the Provider enum. All four are OAuth-only; no API key path exists.
+// claude-code is the primary; codex / gemini / kimi are the "plastic
+// pipes" fallbacks for when Claude OAuth is throttled.
+export type Provider = "claude-code" | "codex" | "gemini" | "kimi";
 
 // Batched-event payload emitted from Rust on the "teraxlyst:session-events"
 // channel.
