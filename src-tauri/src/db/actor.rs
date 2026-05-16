@@ -374,11 +374,17 @@ pub fn spawn_in_memory() -> Result<DbHandle, DbError> {
 
 fn spawn_with_connection(conn: Connection) -> DbHandle {
     let (tx, rx) = mpsc::channel::<DbRequest>(CHANNEL_CAPACITY);
-    // The actor body is fully synchronous (rusqlite is blocking). Park it on
-    // a dedicated blocking thread so the tokio runtime stays responsive.
-    tokio::task::spawn_blocking(move || {
-        run_actor(conn, rx);
-    });
+    // The actor body is fully synchronous (rusqlite is blocking) and
+    // `mpsc::Receiver::blocking_recv` does not require a tokio runtime
+    // context. Use a plain OS thread so the spawn works during Tauri's
+    // setup hook (which runs before the runtime is up) as well as inside
+    // tokio tests.
+    std::thread::Builder::new()
+        .name("teraxlyst-db-actor".to_string())
+        .spawn(move || {
+            run_actor(conn, rx);
+        })
+        .expect("spawn db actor thread");
     DbHandle { tx }
 }
 
