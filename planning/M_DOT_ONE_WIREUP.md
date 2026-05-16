@@ -79,22 +79,40 @@ dead-code checks.
 - Cargo not installed on this Windows box; CI will validate
   `cargo check`, `cargo clippy -- -D warnings`, and `cargo test --lib`.
 
-## Step 7: Claude Code parser improvement (M2.2-ready)
+## Step 7: Claude Code parser improvement (M2.2 SHIPPED)
 
-Replaced the "every non-empty line is AssistantText" stub with a small
-heuristic in `provider_claude_code::parse_line`:
+`provider_claude_code::parse_line` now decodes the real Claude CLI
+`stream-json` envelope (verified against CLI 2.1.118 on Windows).
+Routing order:
 
-- `[tool_call] <name> ...` or `tool_use: <name> ...` -> `ToolCall`
-  with the parsed name (args left null until M2.2 introduces JSON
-  envelopes).
-- `[error]`, `error:`, `Error:` prefixes -> `Error`.
-- substring match on `permission_request` / `awaiting_approval`
-  anywhere in the line -> `SystemNotice` carrying the original text.
-- everything else -> `AssistantText` (M2.0 behavior).
+1. If the line starts with `{` try `serde_json::from_str`. On success,
+   `classify_json_event` returns a three-state signal:
+   - `Some(Some(event))` recognized, emit
+   - `Some(None)` recognized but suppressed (hook lifecycle, empty
+     assistant content)
+   - `None` parse failed or unknown type, fall through to text
+2. Otherwise fall back to the legacy marker heuristic (`[tool_call]`,
+   `tool_use:`, `[error]`, `error:`, `permission_request`).
 
-Added three unit tests covering the new branches. Documented inline as
-M2.2-ready: the marker shapes still need to be confirmed against real
-Claude Code stdout captures.
+JSON envelope mapping:
+
+| Type / subtype | TranscriptEvent |
+|---|---|
+| `system:hook_started` / `hook_response` | skipped |
+| `system:init` | `SystemNotice { text: "session init: model=... cwd=..." }` |
+| `assistant` with `content[].type=text` | `AssistantText` |
+| `assistant` with `content[].type=tool_use` | `ToolCall { name, args }` |
+| `user` with `content[].type=tool_result` | `ToolResult { name=tool_use_id, payload }` |
+| `rate_limit_event` | `SystemNotice { text: "rate_limit: ..." }` |
+| `result` | `Completed` |
+| `error` | `Error { text }` |
+| unknown type | falls through to text path |
+
+`spawn_claude_code` invocation updated to
+`claude --print --output-format stream-json --verbose <prompt>`.
+
+11 new unit tests against captured real-CLI samples, all passing on
+Windows. Total parser tests: 17 (6 legacy markers + 11 JSON envelope).
 
 ## Surprise fixes
 

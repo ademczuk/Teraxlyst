@@ -161,11 +161,100 @@ async fn session_kill_clears_registry() {
 }
 
 // Real Claude Code adapter test. Ignored because CI does not have `claude`
-// on PATH. Enable locally with `cargo test -- --ignored real_claude_code`.
+// on PATH (and running it would burn credits). Enable locally with:
+//   cargo test --lib --locked -- --ignored real_claude_code
+//
+// Gated to cfg(unix) for the same reason the other lifecycle tests are:
+// `tauri::test::mock_app()` on Windows pulls in WebView2Loader.dll
+// which isn't on the test-binary lookup path by default. Validating
+// the JSON parser against real captured Windows samples is done in
+// provider_claude_code.rs unit tests; the full end-to-end test stays
+// unix-gated until we wire WebView2Loader.dll copy into target/debug/deps.
+#[cfg(unix)]
 #[ignore]
 #[tokio::test]
 async fn real_claude_code_smoke() {
-    // Placeholder. Once we verify the actual CLI invocation in M2.1, this
-    // test will spawn `claude --print "say hi"` against a tempdir workspace
-    // and assert at least one assistant event lands in the DB.
+    let dir = tempdir().expect("tempdir");
+    let db_path = dir.path().join("test.sqlite");
+    let db: DbHandle = spawn_at_path(&db_path).expect("spawn db actor");
+
+    let workspace_dir = dir.path().to_string_lossy().to_string();
+    let ws = db
+        .create_workspace(workspace_dir, "claude-smoke".to_string())
+        .await
+        .expect("create_workspace");
+
+    let mgr = SessionManager::new();
+    let app = tauri::test::mock_app();
+    let app_handle = app.handle().clone();
+
+    // Use the same flag set the real provider uses (verified against CLI
+    // 2.1.118). The test seam takes the program + args directly because the
+    // default code path resolves `claude` from PATH and the test workspace
+    // may not have it - on Windows the binary is typically under
+    // C:\Users\<user>\.local\bin\claude.exe. We let the seam resolve via
+    // PATH by passing just "claude" as the program name.
+    let session = mgr
+        .create_with_program(
+            &db,
+            ws.id,
+            Provider::ClaudeCode,
+            "say hi".to_string(),
+            app_handle,
+            "claude".to_string(),
+            vec![
+                "--print".to_string(),
+                "--output-format".to_string(),
+                "stream-json".to_string(),
+                "--verbose".to_string(),
+                "respond with exactly: hi".to_string(),
+            ],
+        )
+        .await
+        .expect("create session");
+
+    // Real `claude` takes ~5-15s depending on cache warmth + model latency.
+    // Poll up to 60s for the registry to clear.
+    let mut waited = Duration::from_millis(0);
+    let step = Duration::from_millis(200);
+    let cap = Duration::from_secs(60);
+    while !mgr.list_running().await.is_empty() && waited < cap {
+        tokio::time::sleep(step).await;
+        waited += step;
+    }
+    assert!(
+        mgr.list_running().await.is_empty(),
+        "registry should be empty after claude exit (waited {:?})",
+        waited
+    );
+
+    // Drain any post-exit events.
+    let mut events = Vec::new();
+    let mut drained = Duration::from_millis(0);
+    while drained < Duration::from_secs(3) {
+        events = db.list_events(session.id, 0).await.expect("list_events");
+        if events.iter().any(|e| e.kind == "completed") {
+            break;
+        }
+        tokio::time::sleep(step).await;
+        drained += step;
+    }
+
+    let kinds: Vec<&str> = events.iter().map(|e| e.kind.as_str()).collect();
+    eprintln!("real_claude_code_smoke event kinds: {:?}", kinds);
+    assert!(
+        kinds.contains(&"user"),
+        "expected the prompt as a user event: {:?}",
+        kinds
+    );
+    assert!(
+        kinds.contains(&"assistant"),
+        "expected an assistant event from real CLI output: {:?}",
+        kinds
+    );
+    assert!(
+        kinds.contains(&"completed"),
+        "expected a completed marker (from JSON result event): {:?}",
+        kinds
+    );
 }
