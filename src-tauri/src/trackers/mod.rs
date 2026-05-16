@@ -1,3 +1,9 @@
+// Tracker commands are registered in invoke_handler but the
+// db::actor::ListTrackers variant + db::actor::list_trackers method are
+// only reached via tracker_list_workspace which itself isn't fired by
+// runtime yet. M3.2 / M4.2 will close this.
+#![allow(dead_code)]
+
 // Tracker module: YAML-defined entity types with schema validation,
 // DB-backed CRUD, and Tauri commands. See planning/ARCHITECTURE.md
 // section 7 and planning/ROADMAP.md M4.

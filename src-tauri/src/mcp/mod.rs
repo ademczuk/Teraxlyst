@@ -1,4 +1,9 @@
-// MCP host. See planning/ARCHITECTURE.md sections 5 + 11.
+// MCP host. The 3 tools land in the runtime tool registry via the rmcp
+// macro; until M3.2 drives them end-to-end, clippy can't see the path
+// from the tool functions to the Args/Result structs. Module-wide allow
+// stays on until that wireup.
+#![allow(dead_code)]
+
 //
 // M3 scope (intentionally narrow):
 // - One in-process MCP server with THREE tools:
