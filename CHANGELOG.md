@@ -112,12 +112,30 @@ build provenance attestation verified end-to-end.
 
 ### Known gaps before promoting to v0.1.0
 
-- macOS + Linux bundles not smoke-tested (Windows-only operator
-  environment this session). Need a real macOS box and a Linux box
-  (or VMs) to install + boot each bundle before publishing.
+- **macOS bundles**: not smoke-tested. No macOS hardware in the
+  operator environment.
+- **Linux bundle**: structurally verified in WSL Ubuntu via
+  `dpkg -I` and `dpkg --contents`. Package metadata clean
+  (version 0.1.0-rc3, amd64, Depends on libwebkit2gtk-4.1-0 +
+  libgtk-3-0). ELF binary correctly built (x86-64, stripped,
+  dynamically linked, glibc 3.2.0+). Non-bundled libs resolve
+  cleanly via ldd; only the two declared-as-deps libs
+  (libwebkit2gtk-4.1, libsoup-3.0, libjavascriptcoregtk-4.1)
+  are unresolved on the bare WSL image, which is the expected
+  state until `apt-get install ./teraxlyst.deb` pulls them.
+  Live GUI launch in WSL not attempted (needs sudo to install
+  the webkit2gtk-4.1 chain).
+- **Windows bundle**: smoke-tested end-to-end (see Verified
+  section above). NSIS installer + binary + WebView2 render +
+  uninstaller all green.
 - `real_claude_code_smoke` integration test still `cfg(unix)`-gated
-  on Windows; `tauri::test::mock_app` needs `WebView2Loader.dll`
-  copied into `target/debug/deps/`.
+  on Windows. Probed: WebView2Loader.dll copy into
+  target/debug/deps/ is necessary but not sufficient; the
+  STATUS_ENTRYPOINT_NOT_FOUND failure lives deeper in the
+  wry/webview2-com chain. The JSON parser is verified by 11
+  unit tests against captured Windows stream-json samples, so
+  this integration test is a nice-to-have rather than a gating
+  concern.
 - `planning/M_DOT_ONE_WIREUP.md` step 7 updated to reflect M2.2
   shipped, but the rest of the M*.1 doc still references
   M2.2-ready scaffolding rather than M2.2 SHIPPED.

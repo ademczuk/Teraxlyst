@@ -164,12 +164,12 @@ async fn session_kill_clears_registry() {
 // on PATH (and running it would burn credits). Enable locally with:
 //   cargo test --lib --locked -- --ignored real_claude_code
 //
-// Gated to cfg(unix) for the same reason the other lifecycle tests are:
-// `tauri::test::mock_app()` on Windows pulls in WebView2Loader.dll
-// which isn't on the test-binary lookup path by default. Validating
-// the JSON parser against real captured Windows samples is done in
-// provider_claude_code.rs unit tests; the full end-to-end test stays
-// unix-gated until we wire WebView2Loader.dll copy into target/debug/deps.
+// cfg(unix)-gated: `tauri::test::mock_app` on Windows fails to load even
+// with WebView2Loader.dll copied to target/debug/deps - the failure is a
+// STATUS_ENTRYPOINT_NOT_FOUND deeper in the wry/webview2-com chain. The
+// JSON parser is verified by 11 unit tests against captured Windows
+// stream-json samples, so this integration test is a nice-to-have rather
+// than a gating concern.
 #[cfg(unix)]
 #[ignore]
 #[tokio::test]
