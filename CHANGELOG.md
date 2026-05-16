@@ -4,8 +4,10 @@ All notable changes to Teraxlyst. Format loosely follows [Keep a Changelog](http
 
 ## [unreleased] - 2026-05-16
 
-Two nimbalyst features ported into Teraxlyst's existing sidebar-tab
-layout, closing part of the feature gap the 4-model audit flagged.
+Four nimbalyst features ported into Teraxlyst's existing sidebar-tab
+layout, closing the largest pieces of the feature gap the 4-model
+audit flagged (excluding mobile + AGPL collab + PGLite, deliberately
+out of scope).
 
 ### Added
 
@@ -66,22 +68,65 @@ layout, closing part of the feature gap the 4-model audit flagged.
   chunk (344 KB gzipped). All under the 1500 KB warning except
   shared subset (1820 KB / 736 KB gzipped) which was already there.
 
-### Not yet ported
+### Also added this turn (Lexical WYSIWYG + CSV grid)
 
-- Lexical WYSIWYG editor (the biggest remaining nimbalyst feature)
+- `src/app/panels/NotesPanel.tsx` + `src/modules/notes/MarkdownEditor.tsx`
+  + `src/modules/notes/markdown-editor.css`: Lexical 0.44.0
+  WYSIWYG markdown editor. Type `**bold**`, `# heading`, `- list
+  item`, paste a link - all round-trip via `@lexical/markdown`
+  TRANSFORMERS. Plugins: RichTextPlugin, HistoryPlugin (undo/redo),
+  ListPlugin, LinkPlugin, MarkdownShortcutPlugin, OnChangePlugin.
+  Lazy-loaded so the ~61 KB gzipped Lexical bundle only ships when
+  the Notes tab is first activated. Dark theme with custom CSS for
+  h1/h2/h3, bold, italic, inline code, lists, links, blockquotes.
+  Visual QA: seed markdown renders correctly with all the styled
+  elements. Persistence not wired yet.
+- `src/app/panels/DataPanel.tsx`: CSV editor backed by
+  react-data-grid 7.0.0-beta.59 (React 19 native, ~15 KB gzipped,
+  virtualization always-on for 50K+ rows). Inline cell edit via
+  `renderTextEditor` (verified working: double-click on any cell
+  mounts an inline `<input>` populated with the current value).
+  Column sort + resize. Toolbar: + Row / - Last row / Copy CSV /
+  Paste CSV. CSV parser handles double-quoted cells with embedded
+  commas and `""` escapes. Dark theme (`.rdg-dark` class). Seed
+  CSV is the actual session task list as a demo. Persistence not
+  wired yet (Tauri-fs round-trip is the follow-up).
+- `src/app/SidebarTabs.tsx`: two more tabs (`notes`, `data`) with
+  `Note01Icon` + `TableIcon`. WIDE_TABS set now contains all four
+  wide panels.
+- `src/app/App.tsx`: imports `WIDE_TABS` instead of hard-coded list
+  so the sidebar auto-expand logic stays in sync with SidebarTabs.
+
+### Visual QA (Chrome MCP, dev server localhost:1420) - all 4 panels
+
+- Notes tab: Lexical mounts, seed markdown renders as proper rich
+  text (h1, h2, bold, inline code chips, link, bulleted lists),
+  scroll works.
+- Data tab: react-data-grid mounts, 7 seed rows visible with 5
+  columns (id, name, owner, priority, status), dark theme applied,
+  inline edit confirmed via dispatched dblclick + verified
+  `<input>` mount with correct value.
+- Diagram tab: still renders the Mermaid SVG flowchart.
+- Canvas tab: still mounts Excalidraw with full toolbar.
+- Sidebar auto-expand: all 4 wide tabs grow the sidebar to 900px;
+  switching to Files/Sessions/etc shrinks back to 265px.
+
+### Not yet ported (deliberately out of scope)
+
 - iOS SwiftUI mobile companion
 - AGPL-3.0 real-time collab server
-- PGLite Postgres-in-WASM (current backend is rusqlite, not WASM)
+- PGLite Postgres-in-WASM (Teraxlyst uses rusqlite, not WASM)
 
 ### Honest delta vs the 4-model audit
 
 The audit said the fork was not worthwhile as a product because the
 feature gap was too wide and the moving target too fast. Porting
-Mermaid + Excalidraw closes part of the gap but does not invalidate
-the audit's reasoning: nimbalyst still ships WYSIWYG + mobile +
-collab that Teraxlyst does not. The right way to read this entry is
-"reducing the gap from huge to large", not "Teraxlyst now equivalent
-to nimbalyst."
+Mermaid + Excalidraw + Lexical + CSV grid closes the largest pieces
+the audit flagged. The remaining gap is mobile + real-time collab +
+PGLite, all of which are out of scope per operator direction. The
+honest read is "the wide-tab feature parity gap has closed enough
+that Teraxlyst can plausibly be used as a single-machine personal
+workspace; the multi-device + multi-user story remains nimbalyst's."
 
 ## [0.1.0-rc4] - 2026-05-16
 

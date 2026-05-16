@@ -18,14 +18,18 @@ import {
   FileDiffIcon,
   FlowchartIcon,
   Folder01Icon,
+  Note01Icon,
+  TableIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useState } from "react";
 
 import CanvasPanel from "./panels/CanvasPanel";
+import DataPanel from "./panels/DataPanel";
 import DiagramPanel from "./panels/DiagramPanel";
 import DiffsPanel from "./panels/DiffsPanel";
 import FilesPanel from "./panels/FilesPanel";
+import NotesPanel from "./panels/NotesPanel";
 import SessionsPanel from "./panels/SessionsPanel";
 import TrackersPanel from "./panels/TrackersPanel";
 
@@ -35,7 +39,9 @@ type TabId =
   | "trackers"
   | "diffs"
   | "diagram"
-  | "canvas";
+  | "canvas"
+  | "notes"
+  | "data";
 
 type TabSpec = {
   id: TabId;
@@ -48,8 +54,10 @@ const TABS: TabSpec[] = [
   { id: "sessions", label: "Sessions", icon: BotIcon },
   { id: "trackers", label: "Trackers", icon: CheckListIcon },
   { id: "diffs", label: "Diffs", icon: FileDiffIcon },
+  { id: "notes", label: "Notes", icon: Note01Icon },
   { id: "diagram", label: "Diagram", icon: FlowchartIcon },
   { id: "canvas", label: "Canvas", icon: CanvasIcon },
+  { id: "data", label: "Data", icon: TableIcon },
 ];
 
 type FilesProps = {
@@ -72,6 +80,8 @@ type Props = {
 export const WIDE_TABS: ReadonlySet<TabId> = new Set([
   "diagram",
   "canvas",
+  "notes",
+  "data",
 ]);
 
 export function SidebarTabs({ files, onActiveChange }: Props) {
@@ -123,8 +133,10 @@ export function SidebarTabs({ files, onActiveChange }: Props) {
         {active === "sessions" ? <SessionsPanel /> : null}
         {active === "trackers" ? <TrackersPanel /> : null}
         {active === "diffs" ? <DiffsPanel /> : null}
+        {active === "notes" ? <NotesPanel /> : null}
         {active === "diagram" ? <DiagramPanel /> : null}
         {active === "canvas" ? <CanvasPanel /> : null}
+        {active === "data" ? <DataPanel /> : null}
       </div>
     </div>
   );

@@ -43,7 +43,7 @@ import {
 // M2.2: Sessions, Trackers, and Diff Inbox now live as proper sidebar
 // panels behind an icon tab strip (see SidebarTabs). The previous
 // floating-toggle overlays were removed in this milestone.
-import { SidebarTabs } from "./SidebarTabs";
+import { SidebarTabs, WIDE_TABS } from "./SidebarTabs";
 import { PreviewStack, type PreviewPaneHandle } from "@/modules/preview";
 import { openSettingsWindow } from "@/modules/settings/openSettingsWindow";
 import { usePreferencesStore } from "@/modules/settings/preferences";
@@ -785,15 +785,14 @@ export default function App() {
                 <div className="h-full border-r border-border/60">
                   <SidebarTabs
                     onActiveChange={(id) => {
-                      // Diagram + Canvas need a wide canvas (Mermaid
-                      // SVG / Excalidraw whiteboard). Other tabs are
-                      // narrow nav strips. Track whether WE expanded
-                      // the sidebar so we only shrink what we grew -
-                      // if the user manually dragged it wider, leave
-                      // their preference alone.
+                      // Wide tabs (Notes/Diagram/Canvas/Data) need a
+                      // big content surface. Narrow tabs are nav
+                      // strips. Track whether WE expanded the sidebar
+                      // so we only shrink what we grew - manual user
+                      // drags are respected.
                       const ref = sidebarRef.current;
                       if (!ref) return;
-                      const isWide = id === "diagram" || id === "canvas";
+                      const isWide = WIDE_TABS.has(id);
                       if (isWide && !sidebarAutoExpandedRef.current) {
                         ref.resize("900px");
                         sidebarAutoExpandedRef.current = true;
