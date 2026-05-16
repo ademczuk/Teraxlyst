@@ -1,9 +1,9 @@
-// MCP host. The 3 tools land in the runtime tool registry via the rmcp
-// macro; until M3.2 drives them end-to-end, clippy can't see the path
-// from the tool functions to the Args/Result structs. Module-wide allow
-// stays on until that wireup.
-#![allow(dead_code)]
-
+// MCP host. The 3 tools land in the runtime tool registry via the
+// `#[tool_router]` macro on `TeraxlystToolset` in tools.rs. The macro
+// generates a `Self::tool_router()` dispatcher that is stored in the
+// `tool_router` field at construction time and read by
+// `server::spawn_in_process`, which keeps every Args struct + tool
+// function reachable for clippy without a module-wide allow.
 //
 // M3 scope (intentionally narrow):
 // - One in-process MCP server with THREE tools:

@@ -149,7 +149,7 @@ fn starts_with_ci(text: &str, prefix: &str) -> bool {
 }
 
 fn first_word(text: &str) -> Option<&str> {
-    text.trim_start().split_whitespace().next()
+    text.split_whitespace().next()
 }
 
 #[cfg(test)]

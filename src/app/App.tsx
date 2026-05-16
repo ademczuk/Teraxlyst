@@ -35,17 +35,16 @@ import {
   NewEditorDialog,
   type EditorPaneHandle,
 } from "@/modules/editor";
-import { FileExplorer } from "@/modules/explorer";
 import {
   Header,
   type SearchInlineHandle,
   type SearchTarget,
 } from "@/modules/header";
-// M5.1: DiffInbox mounted behind a toggle button (mirrors the Sessions
-// overlay below). A richer routed panel can come in M5.2.
-import { DiffInbox } from "@/modules/diff";
+// M2.2: Sessions, Trackers, and Diff Inbox now live as proper sidebar
+// panels behind an icon tab strip (see SidebarTabs). The previous
+// floating-toggle overlays were removed in this milestone.
+import { SidebarTabs } from "./SidebarTabs";
 import { PreviewStack, type PreviewPaneHandle } from "@/modules/preview";
-import { SessionList } from "@/modules/sessions";
 import { openSettingsWindow } from "@/modules/settings/openSettingsWindow";
 import { usePreferencesStore } from "@/modules/settings/preferences";
 import { onKeysChanged } from "@/modules/settings/store";
@@ -186,8 +185,6 @@ export default function App() {
 
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [newEditorOpen, setNewEditorOpen] = useState(false);
-  const [sessionsOpen, setSessionsOpen] = useState(false);
-  const [diffsOpen, setDiffsOpen] = useState(false);
   const miniOpen = useChatStore((s) => s.mini.open);
   const openMini = useChatStore((s) => s.openMini);
   const focusInput = useChatStore((s) => s.focusInput);
@@ -775,20 +772,22 @@ export default function App() {
               <ResizablePanel
                 id="sidebar"
                 panelRef={sidebarRef}
-                defaultSize="225px"
-                minSize="130px"
-                maxSize="450px"
+                defaultSize="265px"
+                minSize="170px"
+                maxSize="500px"
                 collapsible
                 collapsedSize={0}
               >
-                <div className="h-full border-r border-border/60 bg-card">
-                  <FileExplorer
-                    rootPath={explorerRoot}
-                    onOpenFile={handleOpenFile}
-                    onPathRenamed={handlePathRenamed}
-                    onPathDeleted={handlePathDeleted}
-                    onRevealInTerminal={cdInNewTab}
-                    onAttachToAgent={handleAttachFileToAgent}
+                <div className="h-full border-r border-border/60">
+                  <SidebarTabs
+                    files={{
+                      rootPath: explorerRoot,
+                      onOpenFile: handleOpenFile,
+                      onPathRenamed: handlePathRenamed,
+                      onPathDeleted: handlePathDeleted,
+                      onRevealInTerminal: cdInNewTab,
+                      onAttachToAgent: handleAttachFileToAgent,
+                    }}
                   />
                 </div>
               </ResizablePanel>
@@ -931,38 +930,11 @@ export default function App() {
 
           <UpdaterDialog />
 
-          {/* M2.0: AI Sessions overlay. Toggle button sits above the status
-              bar; the panel slides in from the right when open. Replaced
-              with a richer kanban surface in M2.1. */}
-          <button
-            type="button"
-            onClick={() => setSessionsOpen((v) => !v)}
-            className="fixed bottom-10 right-3 z-40 rounded border border-border bg-background px-3 py-1 text-xs shadow-sm"
-            title="Toggle AI sessions panel"
-          >
-            {sessionsOpen ? "Hide sessions" : "Sessions"}
-          </button>
-          {sessionsOpen ? (
-            <div className="fixed bottom-20 right-3 z-40 flex h-[60vh] w-[360px] flex-col overflow-hidden rounded border border-border bg-card shadow-lg">
-              <SessionList />
-            </div>
-          ) : null}
-
-          {/* M5.1: Diff Inbox overlay. Same pattern as Sessions; richer
-              routing/panel integration arrives in M5.2. */}
-          <button
-            type="button"
-            onClick={() => setDiffsOpen((v) => !v)}
-            className="fixed bottom-10 right-32 z-40 rounded border border-border bg-background px-3 py-1 text-xs shadow-sm"
-            title="Toggle diff inbox panel"
-          >
-            {diffsOpen ? "Hide diffs" : "Diffs"}
-          </button>
-          {diffsOpen ? (
-            <div className="fixed bottom-20 right-32 z-40 flex h-[60vh] w-[520px] flex-col overflow-hidden rounded border border-border bg-card shadow-lg">
-              <DiffInbox />
-            </div>
-          ) : null}
+          {/* M2.2: Sessions and Diff Inbox now live as sidebar panels via
+              SidebarTabs. The previous floating toggles were removed; the
+              left icon strip on the sidebar swaps between Files /
+              Sessions / Trackers / Diffs. PromptForUserInputDialog stays
+              at top level below because it is a modal, not a panel. */}
 
           <AlertDialog
             open={pendingCloseTab !== null}

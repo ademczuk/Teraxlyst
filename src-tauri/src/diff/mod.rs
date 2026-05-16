@@ -1,8 +1,3 @@
-// Diff approval module. compute_unified_diff is called by the M3 propose_diff
-// MCP tool; until that tool is actually invoked at runtime (M3.2), clippy
-// flags it as dead.
-#![allow(dead_code)]
-
 // Diff approval module. See planning/ARCHITECTURE.md section 6 and
 // planning/M5_IMPLEMENTATION.md.
 //

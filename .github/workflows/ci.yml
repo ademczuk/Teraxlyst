@@ -77,16 +77,9 @@ jobs:
         working-directory: src-tauri
         run: cargo check --all-targets
 
-      # -D warnings remains relaxed: even after M*.1 lib.rs wireup, the
-      # MCP and diff module internals (PendingPrompts/PendingDiffs methods,
-      # ProposeDiffArgs, etc.) are reachable from the tool definitions but
-      # those tools are only fully driven once an agent actually calls them
-      # at runtime. Clippy's static analysis correctly flags this. The
-      # gate stays off until M3.2 wires the rmcp tool router into the
-      # toolset (which makes every Args struct reachable via the macro).
       - name: cargo clippy
         working-directory: src-tauri
-        run: cargo clippy --all-targets
+        run: cargo clippy --all-targets -- -D warnings
 
       - name: cargo test
         working-directory: src-tauri

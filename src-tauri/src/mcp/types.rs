@@ -5,9 +5,10 @@
 // We use a `#[serde(tag = "kind", rename_all = "kebab-case")]` tagged enum so
 // the renderer sees stable JSON discriminators.
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(tag = "kind", rename_all = "kebab-case")]
 pub enum PromptField {
     MultiSelect {

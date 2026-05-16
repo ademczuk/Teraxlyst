@@ -76,7 +76,7 @@ pub async fn tracker_load_workspace(
         .map_err(|e| e.to_string())?;
     let trackers: Vec<LoadedTrackerDto> = stored
         .into_iter()
-        .zip(pairs.into_iter())
+        .zip(pairs)
         .map(|(t, (_, def))| LoadedTrackerDto {
             id: t.id,
             name: t.name,
