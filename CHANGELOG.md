@@ -2,9 +2,10 @@
 
 All notable changes to Teraxlyst. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/) (pre-`1.0`, minor bumps may include breaking changes).
 
-## [unreleased] - 2026-05-16
+## [0.1.0-rc4] - 2026-05-16
 
-Post-rc3 audit pass. Will land in rc4 on the next tag.
+Post-rc3 audit pass. Security advisory cleanup + release manifest
+hygiene + zero-warning test build. No feature changes from rc3.
 
 ### Fixed (security: 21 prod advisories -> 0)
 

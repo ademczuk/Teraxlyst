@@ -1,7 +1,7 @@
 {
   "name": "teraxlyst",
   "private": true,
-  "version": "0.1.0-rc3",
+  "version": "0.1.0-rc4",
   "type": "module",
   "description": "A Tauri 2 + Rust desktop workspace for AI coding agents. Forked from terax-ai v0.6.5.",
   "repository": {
