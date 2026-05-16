@@ -2,6 +2,85 @@
 
 All notable changes to Teraxlyst. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/) (pre-`1.0`, minor bumps may include breaking changes).
 
+## [0.1.0-pre.7] - 2026-05-16
+
+M*.1 wireup pass, vision-QA-revised icon, and M2.1 race fix. CI green
+with 28 tests passing (up from 25).
+
+### Added (M3.1)
+
+- `mcp::spawn_in_process(...)` invoked in `lib.rs` setup() closure.
+- Three MCP commands registered in `tauri::generate_handler!`:
+  `mcp_prompt_response`, `mcp_diff_resolve`, `mcp_list_pending_prompts`.
+
+### Added (M4.1)
+
+- Five tracker commands registered in `tauri::generate_handler!`:
+  `tracker_load_workspace`, `tracker_create_item`, `tracker_update_item`,
+  `tracker_list_items`, `tracker_query`.
+
+### Added (M5.1)
+
+- `diff_apply_and_resolve` Tauri command registered.
+- `DiffInbox` imported and mounted in `App.tsx` behind a toggle
+  button + 520x60vh overlay panel (mirrors the Sessions overlay
+  pattern). A richer layout-routed panel is M5.2.
+
+### Fixed (M2.1)
+
+- Watcher race in `sessions/manager.rs`. The watcher now: (1) awaits
+  `child.wait()`, (2) awaits the reader's `JoinHandle` so every
+  stdout line is enqueued first, (3) sends `TranscriptEvent::Completed`
+  through the shared `mpsc::Sender` clone, (4) drops the sender so
+  the flusher's `recv()` returns None on the next poll.
+- Result: `Completed` is deterministically the last DB row and the
+  last event in the renderer batch.
+- `session_lifecycle_writes_events_to_db` reverted to the strict
+  assertion `kinds.last() == Some("completed")`.
+
+### Improved (M2.2-ready)
+
+- `provider_claude_code::parse_line` now distinguishes:
+  - `[tool_call] <name>` / `tool_use: <name>` -> `ToolCall`
+  - `[error]` / `error:` / `Error:` -> `Error`
+  - substring `permission_request` / `awaiting_approval` -> `SystemNotice`
+  - everything else -> `AssistantText` (unchanged)
+- Three new unit tests cover the new branches.
+- Marker shapes are best-guess until real Claude Code stdout
+  samples are captured in M2.2.
+
+### Changed (icon, vision-QA pass)
+
+- Vision QA via local Qwen3.6-27B-Q5_K_M-instruct on :7870 reviewed
+  the v1 icon: verdict REGEN. Problems: unbalanced composition (heavy
+  left box vs thin right lines), mustard yellow too dated, terminal
+  prompt `>_` poorly kerned, fails at 32x32.
+- Regenerated v2 with the vision model's suggested prompt: centered
+  radial composition, electric yellow glow, deep midnight blue,
+  designed for 32x32 legibility.
+- Vision QA pass 2 verdict: SHIP v2 (strictly better than v1).
+- v2 source replaces v1 source PNG. All 15 sized PNGs + `icon.ico`
+  (6 sizes) + `icon.icns` + `public/logo.png` regenerated from v2.
+
+### Tests
+
+- `cargo test --lib` on Linux CI: **28 passed, 0 failed, 1 ignored**.
+- Frontend `pnpm exec tsc --noEmit` + `pnpm build`: clean.
+
+### Known v0.1.0 punch list (M3.2 / M5.2 territory)
+
+- clippy `-D warnings` remains off. The M3/M5 module internals
+  (PendingPrompts.fire, ProposeDiffArgs, compute_unified_diff) are
+  reached at runtime once a tool is called, but clippy's static
+  analysis flags them as dead in the current wireup. M3.2 routes
+  rmcp tool calls through the macro-generated dispatcher, which
+  reads every Args struct and makes clippy happy.
+- DiffInbox is mounted but not routed into the main layout.
+- Real Claude Code stdout parsing still needs M2.2 validation
+  against actual CLI output samples.
+- Cargo.lock still gitignored (inherited from upstream); CI runs
+  without `--locked`.
+
 ## [0.1.0-pre.6] - 2026-05-16
 
 M2 milestone landed and validated in CI. M3+M4+M5 modules landed as
