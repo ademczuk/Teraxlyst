@@ -128,6 +128,23 @@ export default function App() {
   // to only auto-shrink it back if we own the expansion - manual user
   // drags should be respected.
   const sidebarAutoExpandedRef = useRef(false);
+
+  // Wide-tab panels (Sessions, etc) emit this event on mount when
+  // they need the sidebar widened but the tab id didn't change (so
+  // SidebarTabs.onActiveChange wouldn't fire). Listen globally and
+  // resize unconditionally; the wide layout always wants room.
+  useEffect(() => {
+    const handler = () => {
+      const ref = sidebarRef.current;
+      if (!ref) return;
+      ref.resize("900px");
+      sidebarAutoExpandedRef.current = true;
+    };
+    window.addEventListener("teraxlyst:request-wide-sidebar", handler);
+    return () =>
+      window.removeEventListener("teraxlyst:request-wide-sidebar", handler);
+  }, []);
+
   const toggleSidebar = useCallback(() => {
     const p = sidebarRef.current;
     if (!p) return;

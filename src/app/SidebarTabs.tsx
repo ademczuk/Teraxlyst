@@ -78,6 +78,7 @@ type Props = {
 // rather than a narrow nav strip. App.tsx watches the active tab via
 // onActiveChange and resizes the sidebar panel accordingly.
 export const WIDE_TABS: ReadonlySet<TabId> = new Set([
+  "sessions",
   "diagram",
   "canvas",
   "notes",

@@ -73,6 +73,19 @@ export function SessionList(){
     return () => clearInterval(id);
   }, []);
 
+  // The two-column transcript layout needs a wide sidebar. When the
+  // user navigates straight to Sessions (vs clicking a wide tab from
+  // a narrow one), SidebarTabs.onActiveChange does NOT fire because
+  // the tab id didn't change. Emit a window event the App listens
+  // for so it can resize the sidebar panel on mount.
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent("teraxlyst:request-wide-sidebar", {
+        detail: { source: "sessions" },
+      }),
+    );
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     async function loadOrSeed() {
@@ -173,8 +186,16 @@ export function SessionList(){
     return null;
   }, [recentEvents]);
 
+  // Two-column layout: prompt + controls + running list on the left
+  // (~340px), full-height transcript on the right (remainder). The
+  // sidebar auto-widens to 900px when Sessions is the active tab
+  // (see SidebarTabs.WIDE_TABS + App.tsx sidebar resize plumbing) so
+  // this layout has real room to breathe.
   return (
-    <div className="flex h-full flex-col gap-3 p-3 text-sm">
+    <div
+      className="flex h-full min-h-0 flex-col gap-2 p-3 text-sm"
+      data-testid="session-list"
+    >
       <div className="flex items-center gap-2">
         <h2 className="text-base font-semibold">Sessions</h2>
         <button
@@ -184,6 +205,15 @@ export function SessionList(){
         >
           Refresh
         </button>
+        <span className="ml-auto text-xs text-muted-foreground">
+          {activeWorkspace ? (
+            <>
+              workspace: <span className="text-foreground">{activeWorkspace.name}</span>
+            </>
+          ) : (
+            <span className="text-destructive">no workspace</span>
+          )}
+        </span>
       </div>
 
       {error ? (
@@ -215,103 +245,120 @@ export function SessionList(){
             {formatResetCountdown(rateLimitBanner.resetsAtUnix, now)}
           </div>
           <div className="mt-1 opacity-70">
-            New sessions will use the OAuth allowance the Claude CLI
-            sees; CLAUDE_CODE_ENTRYPOINT=cli is set in the spawn env
-            to avoid the stricter third-party SDK bucket.
+            Pick Codex / Gemini / Kimi from the provider dropdown to
+            keep working while the Claude window resets. All four use
+            OAuth tokens from their respective {"`<cli> login`"}{" "}
+            subcommand; no API keys.
           </div>
         </div>
       ) : null}
 
-      <div className="flex flex-col gap-1">
-        <label className="text-xs text-muted-foreground" htmlFor="session-prompt">
-          New session prompt{" "}
-          {activeWorkspace ? (
-            <span className="opacity-70">(workspace: {activeWorkspace.name})</span>
-          ) : (
-            <span className="text-destructive">(no workspace)</span>
-          )}
-        </label>
-        <textarea
-          id="session-prompt"
-          className="min-h-[60px] rounded border border-border bg-background p-2"
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          placeholder="What should the agent do?"
-        />
-        <div className="flex items-center gap-2">
-          <label
-            className="text-xs text-muted-foreground"
-            htmlFor="session-provider"
-          >
-            Provider
-          </label>
-          <select
-            id="session-provider"
-            value={provider}
-            onChange={(e) =>
-              setProvider(e.target.value as typeof provider)
-            }
-            className="rounded border border-border bg-background px-2 py-1 text-xs"
-            data-testid="session-provider"
-          >
-            <option value="claude-code">Claude (claude CLI, OAuth)</option>
-            <option value="codex">Codex (OpenAI CLI, OAuth)</option>
-            <option value="gemini">Gemini (Google CLI, OAuth)</option>
-            <option value="kimi">Kimi (Moonshot CLI, OAuth)</option>
-          </select>
-          <button
-            type="button"
-            disabled={creating || !activeWorkspace}
-            className="rounded border border-border bg-primary px-3 py-1 text-xs text-primary-foreground disabled:opacity-50"
-            onClick={() => void handleCreate()}
-          >
-            {creating ? "Starting..." : "Start session"}
-          </button>
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Running ({state.runningIds.length})
-        </h3>
-        {state.runningIds.length === 0 ? (
-          <div className="text-xs italic text-muted-foreground">no running sessions</div>
-        ) : (
-          <ul className="flex flex-col gap-1">
-            {state.runningIds.map((id) => (
-              <li
-                key={id}
-                className="flex items-center justify-between rounded border border-border px-2 py-1"
+      <div className="flex min-h-0 flex-1 gap-3">
+        {/* Left column: controls + running list. Narrow (220px) so the
+            transcript on the right gets the bulk of the horizontal
+            space even when the sidebar hasn't auto-widened. */}
+        <div className="flex w-[220px] shrink-0 flex-col gap-3 overflow-y-auto">
+          <div className="flex flex-col gap-1">
+            <label
+              className="text-xs text-muted-foreground"
+              htmlFor="session-prompt"
+            >
+              New session prompt
+            </label>
+            <textarea
+              id="session-prompt"
+              className="min-h-[90px] resize-none rounded border border-border bg-background p-2"
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              placeholder="What should the agent do?"
+            />
+            <div className="flex flex-col gap-1.5">
+              <label
+                className="text-xs text-muted-foreground"
+                htmlFor="session-provider"
               >
-                <span className="font-mono text-xs">session #{id}</span>
-                <button
-                  type="button"
-                  className="rounded border border-border px-2 py-0.5 text-xs"
-                  onClick={() => void handleKill(id)}
-                >
-                  Kill
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+                Provider (OAuth)
+              </label>
+              <select
+                id="session-provider"
+                value={provider}
+                onChange={(e) =>
+                  setProvider(e.target.value as typeof provider)
+                }
+                className="rounded border border-border bg-background px-2 py-1 text-xs"
+                data-testid="session-provider"
+              >
+                <option value="claude-code">Claude (claude CLI)</option>
+                <option value="codex">Codex (OpenAI CLI)</option>
+                <option value="gemini">Gemini (Google CLI)</option>
+                <option value="kimi">Kimi (Moonshot CLI)</option>
+              </select>
+              <button
+                type="button"
+                disabled={creating || !activeWorkspace}
+                className="rounded border border-border bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground disabled:opacity-50"
+                onClick={() => void handleCreate()}
+              >
+                {creating ? "Starting..." : "Start session"}
+              </button>
+            </div>
+          </div>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-hidden">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Latest transcript events ({recentEvents.length})
-        </h3>
-        <div className="min-h-0 flex-1 overflow-auto rounded border border-border bg-background p-2 font-mono text-xs">
-          {recentEvents.length === 0 ? (
-            <div className="italic text-muted-foreground">no events yet</div>
-          ) : (
-            recentEvents.map(({ sid, idx, event }) => (
-              <div key={`${sid}-${idx}`} className="whitespace-pre-wrap">
-                <span className="opacity-60">#{sid}</span>{" "}
-                <span>{summarizeEvent(event)}</span>
+          <div className="flex flex-col gap-1">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Running ({state.runningIds.length})
+            </h3>
+            {state.runningIds.length === 0 ? (
+              <div className="text-xs italic text-muted-foreground">
+                no running sessions
               </div>
-            ))
-          )}
+            ) : (
+              <ul className="flex flex-col gap-1">
+                {state.runningIds.map((id) => (
+                  <li
+                    key={id}
+                    className="flex items-center justify-between rounded border border-border px-2 py-1"
+                  >
+                    <span className="font-mono text-xs">session #{id}</span>
+                    <button
+                      type="button"
+                      className="rounded border border-border px-2 py-0.5 text-xs"
+                      onClick={() => void handleKill(id)}
+                    >
+                      Kill
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+
+        {/* Right column: full-height transcript */}
+        <div className="flex min-w-0 flex-1 flex-col gap-1 overflow-hidden">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Transcript ({recentEvents.length} events, last {MAX_TRANSCRIPT_ROWS})
+          </h3>
+          <div
+            className="min-h-0 flex-1 overflow-auto rounded border border-border bg-background p-3 font-mono text-xs"
+            data-testid="transcript-pane"
+          >
+            {recentEvents.length === 0 ? (
+              <div className="italic text-muted-foreground">
+                no events yet - start a session to see live transcript
+              </div>
+            ) : (
+              recentEvents.map(({ sid, idx, event }) => (
+                <div
+                  key={`${sid}-${idx}`}
+                  className="mb-1 whitespace-pre-wrap break-words"
+                >
+                  <span className="text-muted-foreground">#{sid}</span>{" "}
+                  <span>{summarizeEvent(event)}</span>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </div>
     </div>
