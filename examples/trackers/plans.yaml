@@ -1,0 +1,45 @@
+# Plans tracker. For tracking ongoing initiatives and their phases.
+# Drop in workspace at .teraxlyst/trackers/plans.yaml.
+
+name: Plans
+
+id_format:
+  type: sequential
+  prefix: PLAN
+  pad: 3
+
+fields:
+  - name: title
+    type: string
+    roles: [title]
+  - name: status
+    type: select
+    roles: [workflowStatus]
+    options: [draft, active, paused, shipped, abandoned]
+  - name: owner
+    type: user
+    roles: [assignee]
+  - name: progress
+    type: number
+    roles: [progress]
+  - name: start_date
+    type: date
+    roles: [startDate]
+  - name: target_date
+    type: date
+    roles: [dueDate]
+  - name: summary
+    type: text
+  - name: milestones
+    type: array
+  - name: risks
+    type: text
+  - name: tags
+    type: multiselect
+    roles: [tags]
+  - name: created
+    type: datetime
+    auto: created_at
+  - name: updated
+    type: datetime
+    auto: updated_at

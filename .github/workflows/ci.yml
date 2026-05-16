@@ -70,17 +70,17 @@ jobs:
         with:
           workspaces: ./src-tauri -> target
 
-      # --locked omitted: Cargo.lock is currently gitignored (inherited from
-      # upstream terax-ai). M0.1 will commit a Cargo.lock and re-enable
-      # --locked here for deterministic CI.
+      # --locked enforces that src-tauri/Cargo.lock is up to date with
+      # Cargo.toml. The lockfile is committed and can be refreshed via the
+      # refresh-cargo-lock.yml workflow (manual workflow_dispatch).
       - name: cargo check
         working-directory: src-tauri
-        run: cargo check --all-targets
+        run: cargo check --all-targets --locked
 
       - name: cargo clippy
         working-directory: src-tauri
-        run: cargo clippy --all-targets -- -D warnings
+        run: cargo clippy --all-targets --locked -- -D warnings
 
       - name: cargo test
         working-directory: src-tauri
-        run: cargo test --lib
+        run: cargo test --lib --locked

@@ -1,12 +1,20 @@
 # Teraxlyst
 
+[![CI](https://github.com/ademczuk/Teraxlyst/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ademczuk/Teraxlyst/actions/workflows/ci.yml)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+![Version](https://img.shields.io/badge/version-0.1.0--pre.8-orange)
+![Tauri](https://img.shields.io/badge/built%20with-Tauri%202-24C8DB)
+![Rust](https://img.shields.io/badge/Rust-stable-orange)
+
 A desktop workspace for AI coding agents. Tauri 2 + Rust + React.
 
-**Status: planning only.** No working code yet. The first code lands in milestone M0 (see roadmap).
+**Status: 0.1.0-pre.** All M0-M6 scaffolds landed and validated in CI. M3.2 / M4.2 / M5.2 wireup landed. 28 tests passing. No tagged release yet; first will be 0.1.0 after the signing prerequisites in [`planning/SIGNING_PLAN.md`](./planning/SIGNING_PLAN.md) are in place.
 
-## What's in this repository right now
+<p align="center">
+  <img src="src-tauri/icons/icon.png" alt="Teraxlyst icon" width="128" height="128">
+</p>
 
-Only planning documents. They live in [`planning/`](./planning/):
+## What's in this repository
 
 - [`planning/README.md`](./planning/README.md) - what Teraxlyst is, what it isn't
 - [`planning/ARCHITECTURE.md`](./planning/ARCHITECTURE.md) - stack decisions, data model, MCP host design
@@ -53,8 +61,17 @@ Teraxlyst targets users who want nimbalyst's session-management and tracker work
 
 See [`planning/ROADMAP.md`](./planning/ROADMAP.md) for details.
 
+## Example trackers
+
+Pre-built tracker YAMLs ship under [`examples/trackers/`](./examples/trackers/). Copy any of them to your workspace at `.teraxlyst/trackers/` to enable:
+
+- `bugs.yaml` - bug reports with severity, status, tags
+- `tasks.yaml` - generic tasks with priority and dependencies
+- `decisions.yaml` - ADR-style architecture decisions
+- `plans.yaml` - multi-phase initiatives with progress and milestones
+
+See [`examples/trackers/README.md`](./examples/trackers/README.md) for the schema cheatsheet.
+
 ## Contributing
 
-Issues and PRs are welcome once M0 has landed. Right now there's nothing to build against.
-
-If you have feedback on the plan itself, open an issue tagged `planning`.
+Issues and PRs welcome. See [CONTRIBUTING.md](./CONTRIBUTING.md) for the contributor workflow. Feedback on the plan goes in issues tagged `planning`.
