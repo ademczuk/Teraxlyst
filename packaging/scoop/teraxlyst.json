@@ -1,0 +1,35 @@
+{
+  "$schema": "https://raw.githubusercontent.com/ScoopInstaller/Scoop/master/schema.json",
+  "version": "0.1.0-pre",
+  "description": "Desktop workspace for AI coding agents. Tauri 2 + Rust + React.",
+  "homepage": "https://github.com/ademczuk/Teraxlyst",
+  "license": "Apache-2.0",
+  "url": "https://github.com/ademczuk/Teraxlyst/releases/download/v0.1.0/Teraxlyst_0.1.0_x64_en-US.msi",
+  "hash": "PLACEHOLDER_SHA256_REPLACE_AT_RELEASE_TIME",
+  "extract_dir": "Teraxlyst",
+  "installer": {
+    "script": [
+      "msiexec /i \"$dir\\Teraxlyst_0.1.0_x64_en-US.msi\" /quiet /norestart"
+    ]
+  },
+  "uninstaller": {
+    "script": [
+      "msiexec /x \"{com.ademczuk.teraxlyst}\" /quiet /norestart"
+    ]
+  },
+  "shortcuts": [
+    [
+      "$env:LOCALAPPDATA\\Programs\\Teraxlyst\\Teraxlyst.exe",
+      "Teraxlyst"
+    ]
+  ],
+  "checkver": {
+    "github": "https://github.com/ademczuk/Teraxlyst"
+  },
+  "autoupdate": {
+    "url": "https://github.com/ademczuk/Teraxlyst/releases/download/v$version/Teraxlyst_$version_x64_en-US.msi",
+    "hash": {
+      "url": "https://github.com/ademczuk/Teraxlyst/releases/download/v$version/SHA256SUMS-windows.txt"
+    }
+  }
+}

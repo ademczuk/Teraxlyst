@@ -52,3 +52,6 @@ desktop.ini
 *.tmp
 *.bak
 *~
+
+# Claude Code per-project state
+.claude/

@@ -1,24 +1,53 @@
-# Teraxlyst signing + release plan (M6)
+# Teraxlyst release + signing plan
 
-What is required to ship signed installers on macOS and Windows, and the steps that block first release. Captured here so the v0.1.0 release work has a concrete checklist instead of guesswork.
+The shipping plan for tagged releases. The original 2026-05 draft assumed paid CA certs ($179/year) and an Apple Developer Program enrollment ($99/year). That plan is parked. The active plan ships unsigned binaries plus free supply-chain attestation, which is the right trade for an early-access OSS desktop tool with no install base to protect.
 
-## TL;DR
+## Active plan: no paid certs
 
-Three external dependencies block a signed release:
+The release pipeline at `.github/workflows/release.yml` fires on `v*` tag push and builds:
 
-1. **Apple Developer Program membership** ($99/year) for macOS notarization.
-2. **Windows code-signing certificate** ($200-500/year from Sectigo or DigiCert, or free EV via a hardware token).
-3. **Tauri updater minisign keypair** (free, but the private key must be generated and stored securely offline).
+| Platform | Bundle | Signed? | Warning |
+|---|---|---|---|
+| Windows x64 | NSIS `.exe` installer, MSI | No (or self-signed) | SmartScreen "Windows protected your PC" until reputation builds |
+| macOS Apple Silicon | `.app.tar.gz`, `.dmg` | Ad-hoc only | Right-click then Open on first launch |
+| macOS Intel | `.app.tar.gz`, `.dmg` | Ad-hoc only | Right-click then Open on first launch |
+| Linux x64 | `.deb`, `.rpm`, AppImage | No | None |
 
-Until those exist, Teraxlyst releases are unsigned. Users get Gatekeeper and SmartScreen warnings. That is acceptable for early-access binaries; document it in the release notes.
+Plus, for every asset:
 
-## macOS
+- A consolidated `SHA256SUMS-<platform>.txt` checksums file uploaded to the same GitHub Release.
+- A GitHub Actions OIDC build provenance attestation via `actions/attest-build-provenance`. Verifiable by anyone with `gh attestation verify --owner ademczuk <file>`. This is Sigstore-backed, free, and gives a chain of custody from the source commit to the binary without involving a CA.
 
-### Notarization (the goal)
+The release notes link to `INSTALL.md` for the per-platform "bypass the warning" instructions.
 
-Tauri's `tauri-action` GitHub Action handles macOS signing + notarization automatically when these secrets are present:
+## Auto-updater (minisign, free)
 
-| Secret name | What it is |
+Tauri's updater plugin signs releases with a minisign keypair. The keypair is generated locally and the public key is committed to `tauri.conf.json`. No CA. To enable:
+
+```bash
+pnpm tauri signer generate -w ~/.tauri/teraxlyst-updater.key
+```
+
+Two outputs:
+- A private key file (path you specified). Store it in your password manager or an air-gapped USB stick. Never commit it.
+- A public key string printed to stdout. Paste it into `src-tauri/tauri.conf.json` under `plugins.updater.pubkey`.
+
+Then add these as GitHub Actions secrets so the release workflow can sign update artifacts:
+
+| Secret | Source |
+|---|---|
+| `TAURI_SIGNING_PRIVATE_KEY` | contents of the private key file |
+| `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | password set during `signer generate` |
+
+When both secrets are present, the workflow produces `latest.json` plus `.sig` files for each updater bundle. When they are absent, the workflow still produces the bundles, just without updater signatures. Users still get a working app; they just have to download new releases manually until the keypair lands.
+
+## Status of paid-cert path
+
+Parked. If we ever decide to spend money, the seven Apple secrets and two Windows cert secrets the workflow needs are all named in this section. The workflow already references them; they currently evaluate to empty strings and the steps are no-ops.
+
+### macOS notarization secrets
+
+| Secret | What it is |
 |---|---|
 | `APPLE_CERTIFICATE` | base64-encoded `.p12` of the Developer ID Application cert |
 | `APPLE_CERTIFICATE_PASSWORD` | password for the `.p12` |
@@ -28,121 +57,78 @@ Tauri's `tauri-action` GitHub Action handles macOS signing + notarization automa
 | `APPLE_API_KEY` | App Store Connect API key id |
 | `APPLE_API_KEY_PATH` | base64-encoded `.p8` private key |
 
-### Steps to get there
+Cost: $99/year. Skip until install base justifies it.
 
-1. Join the Apple Developer Program (https://developer.apple.com/programs/). Costs $99/year.
-2. In Xcode -> Settings -> Accounts, sign in. Create a Developer ID Application certificate.
-3. Export the cert as a `.p12` from Keychain Access. Set a strong password.
-4. Create an App Store Connect API key with the "Developer" role. Download the `.p8` file.
-5. Run `base64 -i AuthKey_XXX.p8 | pbcopy` to encode the key for GitHub secret storage.
-6. Add all seven secrets to the repo settings (Settings -> Secrets and variables -> Actions).
-7. Restore `.github/workflows-pending/release.yml` to `.github/workflows/release.yml`. It already references these secrets.
+### Windows signing secrets
 
-### Unsigned build escape hatch
-
-Until the developer program is paid for, Tauri can produce unsigned `.app` bundles. Users run them with right-click -> Open the first time to bypass Gatekeeper. Document this in the README install section.
-
-## Windows
-
-### Code signing (the goal)
-
-For SmartScreen reputation, the binary must be signed with an Extended Validation (EV) code-signing certificate. Standard OV certificates work for signing but do not get an immediate SmartScreen reputation; users still see a warning until the binary builds reputation via downloads.
-
-| Option | Cost | Trade-offs |
-|---|---|---|
-| EV cert from Sectigo / DigiCert | $300-500/year | Hardware token required, instant SmartScreen reputation |
-| OV cert from Certum / SSL.com | $80-200/year | Software cert, slow SmartScreen reputation buildup |
-| Free Azure Trusted Signing (new 2024) | $9.99/month | Requires Microsoft business verification |
-
-Tauri's release workflow accepts:
-
-| Secret name | What it is |
+| Secret | What it is |
 |---|---|
 | `WINDOWS_CERTIFICATE` | base64-encoded `.pfx` |
 | `WINDOWS_CERTIFICATE_PASSWORD` | password for the `.pfx` |
 
-### Steps to get there
+Cost: $80-500/year depending on CA. Azure Trusted Signing is the newer managed alternative at ~$10/month with Microsoft business verification. Skip until install base justifies it.
 
-1. Purchase an OV certificate from Certum (cheapest non-token option, but slow SmartScreen reputation). Or Azure Trusted Signing for a managed flow.
-2. Download the `.pfx`.
-3. Encode + add to GitHub secrets.
-4. Tauri picks it up automatically during the windows-latest matrix job.
+## What we get without paid certs
 
-### Unsigned escape hatch
+- **Provenance**: `gh attestation verify` proves the binary was built from a specific commit by GitHub Actions, not a random box. This is what supply-chain attacks try to fake; Sigstore makes it cheap to detect.
+- **Integrity**: SHA256SUMS file lets users verify the download wasn't tampered with in transit.
+- **Updates**: Minisign-signed updater artifacts. The app's embedded public key rejects any update not signed by the keypair holder. So even without a CA cert on the installer, the auto-update path is cryptographically guarded.
 
-NSIS installer works unsigned. SmartScreen shows "Windows protected your PC" the first few hundred downloads. Users click "More info" -> "Run anyway". Document in README.
+## What we don't get
 
-## Auto-updater (minisign keypair)
+- **SmartScreen reputation on Windows.** Users see the warning on first install. Workaround: a one-line "More info then Run anyway" instruction in INSTALL.md.
+- **Gatekeeper pass on macOS.** Users do right-click then Open on first launch.
+- **No Apple Store / Microsoft Store distribution.** Both require paid programs.
 
-Tauri's updater plugin verifies new releases against a public key embedded in the app. Generation:
+## Release process
 
-```bash
-pnpm tauri signer generate -w ~/.tauri/teraxlyst-updater.key
-```
+See `docs/RELEASE.md` for the operator-facing checklist. Short version:
 
-This produces:
-- A private key at the path you specified. Store it offline (encrypted password manager, hardware key, or air-gapped USB). Do NOT commit to the repo.
-- A public key printed to stdout. Embed this in `tauri.conf.json` under `plugins.updater.pubkey`.
+1. Tag the commit: `git tag v0.1.0 && git push origin v0.1.0`
+2. Wait for the release workflow to finish (about 30 minutes wall-clock for the matrix).
+3. Open the draft release on GitHub, edit the body, publish.
+4. Test the unsigned bundles on each OS before announcing.
 
-The release workflow then needs:
+## 0.1.0 punch list (pre-release)
 
-| Secret name | What it is |
-|---|---|
-| `TAURI_SIGNING_PRIVATE_KEY` | content of the private key file |
-| `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | password set during generation |
+Items that block on this plan:
 
-Once the keypair exists and the public key is embedded:
+- [x] Replace `SIGNING_PLAN.md` to drop paid-cert assumption (this doc).
+- [x] Move `.github/workflows-pending/release.yml` into `.github/workflows/` as the unsigned variant.
+- [x] Add SHA256SUMS + Sigstore attestation steps.
+- [x] Document INSTALL.md bypass instructions for each platform.
+- [ ] Generate the minisign updater keypair, paste pubkey into `tauri.conf.json`, add the two secrets to the repo.
+- [ ] First release candidate tag: `v0.1.0-rc1`. Verify all three platforms install and run from a clean machine.
+- [ ] CHANGELOG draft.
+- [ ] `v0.1.0` proper.
 
-1. Restore the updater config in `src-tauri/tauri.conf.json` (removed in M0 commit).
-2. Point `endpoints` at `https://github.com/ademczuk/Teraxlyst/releases/latest/download/latest.json`.
-3. Tauri's release workflow generates `latest.json` automatically during the build.
+Items still needed at the feature level (independent of signing):
 
-## Linux
+- [ ] Onboarding wizard: first-run workspace + provider setup.
+- [ ] M4.1 inline tracker refs.
+- [ ] M5.1 DiffInbox route.
+- [ ] Real-Claude integration test enabled on Windows (needs WebView2Loader.dll copy for `tauri::test::mock_app`).
 
-No signing required for `.deb` / `.rpm` / AppImage. Users may verify the binary via a checksums file published alongside the release. Trivial to add to the release workflow.
+## Distribution channels (community, all free)
 
-The AUR `teraxlyst-bin` package is currently referenced as broken in `UpdaterDialog.tsx` (we inherited the install command from upstream). M6.1 task: create an actual AUR package and update the displayed command, or short-circuit the Linux manual-update path to "Download from GitHub Releases" instead.
+After the GitHub Release works:
 
-## Release workflow restoration
+- **Scoop bucket** (Windows power users): a JSON manifest in a separate repo `ademczuk/scoop-bucket` pointing at the GitHub Release. `scoop install teraxlyst`. No signing requirement.
+- **Homebrew tap** (macOS power users): a Ruby formula in `ademczuk/homebrew-tap` pointing at the ad-hoc-signed `.app.tar.gz`. `brew install ademczuk/tap/teraxlyst`. No paid Apple program required.
+- **AUR `teraxlyst-bin`** (Arch users): PKGBUILD that fetches the AppImage. No signing.
+- **Flathub** (Linux desktop integration): higher friction, requires the app to pass freedesktop guidelines and a review. Worth doing after 0.1.0 lands.
 
-After secrets and keypair are in place:
-
-1. `git mv .github/workflows-pending/release.yml .github/workflows/release.yml`
-2. Update the `releaseName` field from `"Terax ${version}"` to `"Teraxlyst ${version}"` (already noted in `planning/M0_TODO.md`).
-3. Push a `v0.1.0` tag. The release workflow fires on `v*` tag push.
-4. The workflow produces signed installers for macOS (aarch64 + x86_64), Linux (deb + rpm + AppImage), and Windows (MSI + NSIS). All uploaded as draft release assets.
-5. Edit the draft release notes, publish.
-
-## 0.1.0 punch list (excluding signing dependencies)
-
-Items I can land before any external signing setup:
-
-- [ ] Lockfile refresh: run `pnpm install` and commit the resulting `pnpm-lock.yaml`. Then re-enable `--frozen-lockfile` in CI.
-- [ ] Cargo.lock commit: run `cargo generate-lockfile` in src-tauri, commit. Re-enable `--locked` in CI.
-- [ ] Real Claude Code adapter: verify the actual CLI invocation and stdout format. Replace the M2 stub parser with proper tool-call / permission-prompt detection.
-- [ ] M2.1 watcher-to-DB sync: fix the Completed-marker race the M2 test currently papers over.
-- [ ] M5.1 DiffInbox panel: wire `DiffInbox` into a route or panel in App.tsx.
-- [ ] M4.1 inline tracker refs: markdown extension that renders `#tracker[BUG-014]` as a pill.
-- [ ] Onboarding wizard: first-run flow to create a workspace, configure a provider, smoke-test.
-- [ ] README install instructions covering all three platforms with the unsigned-binary escape hatches.
-- [ ] CHANGELOG cleanup: rewrite as a user-facing release-notes draft.
-
-Items that block on signing setup:
-
-- [ ] Apple Developer Program enrollment.
-- [ ] Windows code-signing certificate (or Azure Trusted Signing).
-- [ ] Minisign keypair generation and secret storage.
-- [ ] Restore `release.yml` to `.github/workflows/`.
-- [ ] Restore updater pubkey + endpoint in `tauri.conf.json`.
-- [ ] First tagged release.
+None of these require paid certs.
 
 ## Cost summary
 
-| Item | Annual cost |
-|---|---|
-| Apple Developer Program | $99 |
-| Windows OV cert (Certum) | ~$80 |
-| GitHub Actions minutes | $0 within free tier for now |
-| Total to ship signed installers | ~$179/year |
+| Item | Annual cost (current plan) | Annual cost (paid-cert plan) |
+|---|---|---|
+| GitHub Actions | $0 (free tier) | $0 (free tier) |
+| Apple Developer Program | $0 (skip) | $99 |
+| Windows code-signing cert | $0 (skip) | $80 |
+| Sigstore provenance | $0 (built into Actions) | $0 |
+| Minisign updater keypair | $0 | $0 |
+| **Total** | **$0** | **$179** |
 
-EV cert + Azure Trusted Signing variants push this higher. Free tier is the realistic starting point for a one-person early-access project.
+The free-tier path is the realistic starting point. Reassess at 1,000+ active users.

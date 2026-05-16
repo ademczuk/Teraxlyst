@@ -69,7 +69,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEQzRTU4RjcyQzcwQ0JGNDYKUldSR3Z3ekhjby9sMDdFZ3ZiVDViRUFvQ2FySkhta2R6dmNWTlIrSUNvM2MxSjR6QW1kd3E0ZjgK",
       "endpoints": [
         "https://github.com/ademczuk/Teraxlyst/releases/latest/download/latest.json"
       ]

@@ -1,0 +1,217 @@
+name: Release
+
+# Unsigned multi-platform release. No paid code-signing certificates.
+# What we DO use (all free):
+#   - Tauri minisign keypair for updater artifact signing
+#   - SHA256 checksums for every release asset
+#   - GitHub Actions build provenance attestation (SLSA 3-ish)
+#   - macOS ad-hoc signing (works without an Apple Developer account)
+#
+# What users see on first launch:
+#   - Windows: SmartScreen "Windows protected your PC" prompt; click
+#     More info then Run anyway. Disappears after a few hundred installs.
+#   - macOS: Gatekeeper warning; right-click the .app then Open, OR run
+#     `xattr -dr com.apple.quarantine /Applications/Teraxlyst.app`.
+#   - Linux: no warnings.
+#
+# When you eventually buy a real cert, the path is documented in
+# planning/SIGNING_PLAN.md.
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to build (e.g. v0.1.0-rc1). Must already exist."
+        required: true
+
+jobs:
+  publish-tauri:
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest
+            args: --target aarch64-apple-darwin
+            rust-target: aarch64-apple-darwin
+          - platform: macos-latest
+            args: --target x86_64-apple-darwin
+            rust-target: x86_64-apple-darwin
+          - platform: ubuntu-22.04
+            args: ""
+            rust-target: ""
+          - platform: windows-latest
+            args: ""
+            rust-target: ""
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref_name }}
+
+      - name: Install Linux build dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            librsvg2-dev \
+            libssl-dev \
+            patchelf
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust-target }}
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: ./src-tauri -> target
+          key: ${{ matrix.platform }}-${{ matrix.rust-target }}
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Tauri bundles
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Minisign keypair for the auto-updater. The Tauri action
+          # tolerates these being empty when no updater signing is set
+          # up. To enable signed updates: generate a keypair locally via
+          # `pnpm tauri signer generate -w teraxlyst-updater.key`, add
+          # the private key + password as GitHub secrets, then commit
+          # the public key to tauri.conf.json under plugins.updater.pubkey.
+          # No paid CA involved.
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: ${{ inputs.tag || github.ref_name }}
+          releaseName: "Teraxlyst ${{ inputs.tag || github.ref_name }}"
+          releaseBody: |
+            Unsigned early-access build. See INSTALL.md for the per-platform
+            "bypass the unsigned-binary warning" instructions.
+
+            **Checksums:** the `SHA256SUMS-*.txt` file alongside the
+            installers lists SHA-256 for every asset on this platform.
+            Verify before installing:
+
+              Windows : `Get-FileHash teraxlyst.exe -Algorithm SHA256`
+              macOS   : `shasum -a 256 Teraxlyst.app.tar.gz`
+              Linux   : `sha256sum teraxlyst*.AppImage`
+
+            **Provenance:** each release asset is signed with a GitHub
+            Actions OIDC build provenance attestation (see
+            `gh attestation verify`).
+          releaseDraft: true
+          prerelease: false
+          args: ${{ matrix.args }}
+
+      # Generate SHA256 checksums for every bundle the matrix job
+      # produced. We glob the tauri build output rather than upload
+      # individual files so any future bundle target (e.g. .pkg, .snap)
+      # is automatically covered.
+      - name: Generate SHA256 checksums (unix)
+        if: matrix.platform != 'windows-latest'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd src-tauri/target/${{ matrix.rust-target != '' && format('{0}/release', matrix.rust-target) || 'release' }}/bundle
+          # Walk every bundle directory (deb, rpm, appimage, dmg,
+          # macos, etc.) and emit one consolidated checksums file.
+          PLATFORM="${{ matrix.platform }}"
+          SUFFIX="${{ matrix.rust-target }}"
+          OUT="SHA256SUMS-${PLATFORM}${SUFFIX:+-}${SUFFIX}.txt"
+          find . -type f \
+            ! -name "*.sig" \
+            ! -name "latest.json" \
+            ! -name "*.AppImage.tar.gz" \
+            -print0 \
+          | xargs -0 -I{} shasum -a 256 "{}" \
+          | sort > "../$OUT"
+          cat "../$OUT"
+
+      - name: Generate SHA256 checksums (windows)
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        run: |
+          $bundleDir = "src-tauri/target/release/bundle"
+          if (-not (Test-Path $bundleDir)) {
+            Write-Host "No bundle dir at $bundleDir, skipping"
+            exit 0
+          }
+          $files = Get-ChildItem -Path $bundleDir -Recurse -File `
+            | Where-Object {
+                $_.Extension -ne ".sig" -and
+                $_.Name -ne "latest.json"
+              }
+          $out = "src-tauri/target/release/SHA256SUMS-windows.txt"
+          $lines = foreach ($f in $files) {
+            $hash = (Get-FileHash -Algorithm SHA256 -Path $f.FullName).Hash.ToLower()
+            $rel = $f.FullName.Substring((Resolve-Path $bundleDir).Path.Length + 1)
+            "$hash  $rel"
+          }
+          $lines | Sort-Object | Set-Content -Encoding utf8 -Path $out
+          Get-Content $out
+
+      # Attach the SHA256SUMS file to the draft release. tauri-action
+      # uploads the bundles itself; we just bolt on the manifest.
+      - name: Upload SHA256SUMS to release
+        if: matrix.platform != 'windows-latest'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          SUFFIX="${{ matrix.rust-target }}"
+          OUT="src-tauri/target/${{ matrix.rust-target != '' && format('{0}/release', matrix.rust-target) || 'release' }}/SHA256SUMS-${{ matrix.platform }}${SUFFIX:+-}${SUFFIX}.txt"
+          TAG="${{ inputs.tag || github.ref_name }}"
+          gh release upload "$TAG" "$OUT" --clobber --repo "$GITHUB_REPOSITORY"
+
+      - name: Upload SHA256SUMS to release (windows)
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $tag = "${{ inputs.tag || github.ref_name }}"
+          gh release upload $tag "src-tauri/target/release/SHA256SUMS-windows.txt" --clobber --repo "$env:GITHUB_REPOSITORY"
+
+      # Build provenance attestation. This signs the bundles with a
+      # short-lived OIDC certificate from Sigstore. Users can verify with
+      # `gh attestation verify --owner ademczuk teraxlyst.exe`.
+      # Free, no CA, no Apple Developer Program.
+      - name: Generate build provenance attestation
+        if: matrix.platform != 'windows-latest'
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            src-tauri/target/${{ matrix.rust-target != '' && format('{0}/release', matrix.rust-target) || 'release' }}/bundle/**/*.deb
+            src-tauri/target/${{ matrix.rust-target != '' && format('{0}/release', matrix.rust-target) || 'release' }}/bundle/**/*.rpm
+            src-tauri/target/${{ matrix.rust-target != '' && format('{0}/release', matrix.rust-target) || 'release' }}/bundle/**/*.AppImage
+            src-tauri/target/${{ matrix.rust-target != '' && format('{0}/release', matrix.rust-target) || 'release' }}/bundle/**/*.dmg
+            src-tauri/target/${{ matrix.rust-target != '' && format('{0}/release', matrix.rust-target) || 'release' }}/bundle/**/*.app.tar.gz
+
+      - name: Generate build provenance attestation (windows)
+        if: matrix.platform == 'windows-latest'
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            src-tauri/target/release/bundle/**/*.exe
+            src-tauri/target/release/bundle/**/*.msi

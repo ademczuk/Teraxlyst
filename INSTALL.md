@@ -43,7 +43,13 @@ The first build downloads and compiles a few hundred Rust crates. Expect 5-15 mi
 
 ## Running an unsigned build
 
-Until a release is signed and notarized (tracked in `planning/SIGNING_PLAN.md`), the binaries are unsigned and the OS will warn the first time you run them.
+Teraxlyst ships unsigned by design. We do not pay for code-signing certificates. See `planning/SIGNING_PLAN.md` for the rationale and `docs/RELEASE.md` for what we ship instead (SHA256 checksums + Sigstore build provenance attestation, both free). On first launch the OS will warn; the bypass is one click per platform.
+
+You can verify any GitHub Release bundle came from this repo's CI:
+
+```bash
+gh attestation verify --owner ademczuk <downloaded-file>
+```
 
 ### macOS
 
