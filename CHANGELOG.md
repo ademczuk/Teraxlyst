@@ -2,6 +2,70 @@
 
 All notable changes to Teraxlyst. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/) (pre-`1.0`, minor bumps may include breaking changes).
 
+## [0.1.0-pre.8] - 2026-05-16
+
+clippy `-D warnings` re-enabled. M3.2 rmcp tool router macro wired.
+M4.2 + M5.2 sidebar tab layout shipped. 28 tests pass.
+
+### Added (M3.2 - rmcp tool router)
+
+- Second `impl TeraxlystToolset` block in `src-tauri/src/mcp/tools.rs`
+  carries `#[tool_router]` with three `#[tool]` async adapter methods
+  (`prompt_for_user_input`, `propose_diff`, `read_workspace_file`).
+  Each takes `Parameters<ArgsStruct>`, delegates to the existing
+  do_* method, and wraps the result into
+  `CallToolResult::success(...)`. Errors map through a helper that
+  picks the right `ErrorData` constructor per `McpError` variant.
+- `TeraxlystToolset` gained a `tool_router: ToolRouter<TeraxlystToolset>`
+  field populated in `new()` via `Self::tool_router()`. The router is
+  read at startup by `server::spawn_in_process` (tool-count log) which
+  makes every Args struct + adapter reachable for clippy.
+- `schemars::JsonSchema` derives added to `PromptForUserInputArgs`,
+  `ProposeDiffArgs`, `ReadWorkspaceFileArgs`, and the nested
+  `PromptField`.
+- Removed module-wide `#![allow(dead_code)]` from `mcp/mod.rs`,
+  `diff/mod.rs`, `trackers/mod.rs`.
+- Targeted `#[allow(dead_code)]` retained on items genuinely reserved
+  for near-term work (DbError::Io, McpError::Serde, McpHandle field
+  bundle, DbHandle::list_trackers, trackers::mcp_wrappers).
+
+### Added (M4.2 + M5.2 - sidebar tab layout)
+
+- `src/app/SidebarTabs.tsx`: 40px vertical icon strip with four tabs
+  (Files / Sessions / Trackers / Diffs). Active tab gets a primary
+  left border + muted background. Local `useState<TabId>` defaulting
+  to "files".
+- `src/app/panels/FilesPanel.tsx`: wraps existing FileExplorer (every
+  prop forwarded).
+- `src/app/panels/SessionsPanel.tsx`: wraps SessionList.
+- `src/app/panels/TrackersPanel.tsx`: lists workspace trackers from
+  `tracker_load_workspace`, drills into TrackerTable on click.
+- `src/app/panels/DiffsPanel.tsx`: wraps DiffInbox.
+- Removed `sessionsOpen` and `diffsOpen` state from App.tsx, along
+  with both floating-toggle JSX blocks. Standalone FileExplorer
+  mount replaced with `<SidebarTabs files=...>`.
+- Sidebar widened to 265px default (170-500 range) to accommodate
+  tracker tables and diff lists.
+- `PromptForUserInputDialog` stays at top level (it's a modal).
+
+### Fixed
+
+- `provider_claude_code.rs:152` - dropped redundant `trim_start()`
+  before `split_whitespace()` (clippy lint).
+- `trackers/commands.rs:79` - removed explicit `.into_iter()` from
+  `.zip()` (clippy lint).
+
+### CI
+
+- `cargo clippy --all-targets -- -D warnings` re-enabled and green.
+- 28 tests pass (up from previous 28; no test count change but the
+  M3.2 wireup didn't break any).
+
+### Detail
+
+- `planning/M3_DOT_2_WIREUP.md`
+- `planning/M_DOT_TWO_LAYOUT.md`
+
 ## [0.1.0-pre.7] - 2026-05-16
 
 M*.1 wireup pass, vision-QA-revised icon, and M2.1 race fix. CI green

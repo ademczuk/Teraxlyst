@@ -46,9 +46,9 @@ Teraxlyst targets users who want nimbalyst's session-management and tracker work
 | M0 fork + rebrand | done |
 | M1 persistence | done (DbActor + 6 tables + 8 commands + 4 tests, all green in CI) |
 | M2 multi-session manager | done (SessionManager + Claude Code subprocess + streaming + simple list view + 2 tests) |
-| M3 MCP host | wired (rmcp 1.7 + 3 tools + PromptForUserInputDialog mounted in App.tsx; tool router refinement is M3.2) |
-| M4 trackers | wired (5 tracker commands registered + YAML loader; table view layout integration is M4.2) |
-| M5 diff approval | wired (DiffInbox mounted behind toggle + diff_apply_and_resolve registered; routed layout is M5.2) |
+| M3 MCP host | done (rmcp 1.7 + tool_router macro dispatcher + 3 tools + PromptForUserInputDialog mounted globally) |
+| M4 trackers | done (5 tracker commands + YAML loader + TrackersPanel in sidebar) |
+| M5 diff approval | done (DiffInbox in sidebar tab + Monaco diff viewer + diff_apply_and_resolve) |
 | M6 0.1.0 release | docs (INSTALL.md + SIGNING_PLAN.md). Signing certs + keypair generation needed before tagged release |
 
 See [`planning/ROADMAP.md`](./planning/ROADMAP.md) for details.
