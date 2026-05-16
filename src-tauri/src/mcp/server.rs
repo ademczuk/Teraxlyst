@@ -24,7 +24,13 @@ use super::prompt_pipeline::{PendingPrompts, TauriPromptEmitter};
 use super::tools::TeraxlystToolset;
 
 // Convenient bundle stashed in Tauri state.
+// `toolset` is read at startup by spawn_in_process for tool-count
+// logging; clippy still treats the Arc field as unread because the
+// log expression goes through `.tool_router.list_all().len()` on a
+// local variable. M3.3 will surface the field via a runtime endpoint
+// (e.g. `mcp_list_tools` command) that exposes the toolset directly.
 #[derive(Clone)]
+#[allow(dead_code)]
 pub struct McpHandle {
     pub toolset: Arc<TeraxlystToolset>,
     pub prompts: PendingPrompts,

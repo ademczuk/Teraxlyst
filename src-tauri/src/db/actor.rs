@@ -79,6 +79,8 @@ pub enum DbRequest {
         schema_json: String,
         reply: Reply<Tracker>,
     },
+    // Used by tests + future M4.2 tracker UI workspace switcher.
+    #[allow(dead_code)]
     ListTrackers {
         workspace_id: i64,
         reply: Reply<Vec<Tracker>>,
@@ -254,6 +256,8 @@ impl DbHandle {
         rx.await.map_err(|_| DbError::ActorClosed)?
     }
 
+    // Used by tests + future M4.2 tracker UI workspace switcher.
+    #[allow(dead_code)]
     pub async fn list_trackers(&self, workspace_id: i64) -> Result<Vec<Tracker>, DbError> {
         let (reply, rx) = oneshot::channel();
         self.send(DbRequest::ListTrackers { workspace_id, reply }).await?;
