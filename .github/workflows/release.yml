@@ -124,24 +124,30 @@ jobs:
           prerelease: false
           args: ${{ matrix.args }}
 
-      # Generate SHA256 checksums for every bundle the matrix job
-      # produced. We glob the tauri build output rather than upload
-      # individual files so any future bundle target (e.g. .pkg, .snap)
-      # is automatically covered.
+      # Generate SHA256 checksums for the user-facing bundles only.
+      # We list specific extensions rather than walk the whole bundle
+      # tree because tauri-bundler co-locates internal scaffolding
+      # (create-dmg toolchain, the unpacked .app contents) alongside
+      # the actual installer artifacts. Users only see the installers,
+      # so the checksums file should match what they download.
       - name: Generate SHA256 checksums (unix)
         if: matrix.platform != 'windows-latest'
         shell: bash
         run: |
           set -euo pipefail
           cd src-tauri/target/${{ matrix.rust-target != '' && format('{0}/release', matrix.rust-target) || 'release' }}/bundle
-          # Walk every bundle directory (deb, rpm, appimage, dmg,
-          # macos, etc.) and emit one consolidated checksums file.
           PLATFORM="${{ matrix.platform }}"
           SUFFIX="${{ matrix.rust-target }}"
           OUT="SHA256SUMS-${PLATFORM}${SUFFIX:+-}${SUFFIX}.txt"
+          # User-facing bundle extensions only. AppImage.tar.gz is
+          # the updater payload, not the installer; users don't run
+          # it directly so we exclude it.
           find . -type f \
-            ! -name "*.sig" \
-            ! -name "latest.json" \
+            \( -name "*.deb" \
+            -o -name "*.rpm" \
+            -o -name "*.AppImage" \
+            -o -name "*.dmg" \
+            -o -name "*.app.tar.gz" \) \
             ! -name "*.AppImage.tar.gz" \
             -print0 \
           | xargs -0 -I{} shasum -a 256 "{}" \
@@ -157,11 +163,11 @@ jobs:
             Write-Host "No bundle dir at $bundleDir, skipping"
             exit 0
           }
+          # User-facing installers only. NSIS .exe is the entire
+          # Windows distribution surface; MSI is intentionally not
+          # built (pre-release tag incompatibility, see SIGNING_PLAN).
           $files = Get-ChildItem -Path $bundleDir -Recurse -File `
-            | Where-Object {
-                $_.Extension -ne ".sig" -and
-                $_.Name -ne "latest.json"
-              }
+            -Include "*.exe","*.msi"
           $out = "src-tauri/target/release/SHA256SUMS-windows.txt"
           $lines = foreach ($f in $files) {
             $hash = (Get-FileHash -Algorithm SHA256 -Path $f.FullName).Hash.ToLower()

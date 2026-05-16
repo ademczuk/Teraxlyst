@@ -80,8 +80,10 @@ impl SessionManager {
 
     // Test-only seam: spawn an arbitrary program instead of the provider
     // binary. Lets the integration test exercise the full pipeline without
-    // depending on `claude` being installed.
-    #[cfg(test)]
+    // depending on `claude` being installed. cfg(any(unix, ...)) mirrors
+    // the gating in sessions/tests.rs so the Windows test build doesn't
+    // flag the method as dead.
+    #[cfg(all(test, unix))]
     #[allow(clippy::too_many_arguments)]
     pub async fn create_with_program<R: Runtime>(
         &self,

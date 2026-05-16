@@ -9,17 +9,24 @@
 // Provider-specific tests (real Claude Code spawning) are marked #[ignore]
 // because they require an external binary; CI does not have it.
 
+// On Windows, `bash -c` is not universally available and
+// `tauri::test::mock_app` fails to load even with WebView2Loader.dll
+// next to the test binary. All integration tests here are cfg(unix);
+// the imports they need are gated the same way to avoid dead-code
+// warnings on the Windows test build.
+#[cfg(unix)]
 use std::time::Duration;
 
+#[cfg(unix)]
 use tempfile::tempdir;
 
+#[cfg(unix)]
 use crate::db::actor::{spawn_at_path, DbHandle};
 
+#[cfg(unix)]
 use super::manager::SessionManager;
+#[cfg(unix)]
 use super::types::Provider;
-
-// On Windows, `bash -c` is not universally available. The Linux + macOS CI
-// runs this test; on Windows we skip via cfg(unix) below.
 
 #[cfg(unix)]
 #[tokio::test]
