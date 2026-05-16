@@ -2,6 +2,52 @@
 
 All notable changes to Teraxlyst. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/) (pre-`1.0`, minor bumps may include breaking changes).
 
+## [0.1.0-pre.9] - 2026-05-16
+
+Polish pass. Cargo.lock now tracked + CI runs --locked. Example
+tracker YAMLs shipped. README badges added.
+
+### Added
+
+- `examples/trackers/`: bugs.yaml, tasks.yaml, decisions.yaml,
+  plans.yaml + a README explaining the field type cheatsheet, roles,
+  ID formats, and MCP-tool usage. Users can copy any of these to
+  their workspace at `.teraxlyst/trackers/` and the M4 tracker UI
+  picks them up.
+- `.github/workflows/refresh-cargo-lock.yml`: workflow_dispatch-only
+  job that runs `cargo generate-lockfile` in src-tauri/ and commits
+  the refreshed Cargo.lock back to main via
+  stefanzweifel/git-auto-commit-action@v5.
+- `planning/CARGO_LOCK_FLOW.md`: why we commit Cargo.lock, how to
+  refresh, why CI now fails on stale lockfile.
+
+### Changed
+
+- `.github/workflows/ci.yml`: --locked added to cargo check, clippy,
+  and test. Lockfile drift is now a CI failure.
+- `README.md`: CI badge, Apache-2.0 license badge, version badge,
+  Tauri 2 + Rust badges. Icon shown at the top. Example trackers
+  section added.
+
+### Verified
+
+- Refresh workflow ran successfully (manual workflow_dispatch).
+- Cargo.lock regenerated with M1+ deps (rusqlite, tokio, thiserror,
+  ulid, rmcp, similar, serde_yaml_ng, schemars).
+- CI with --locked + -D warnings passes: 28 tests, 0 failed, 1
+  ignored. Rust check 5m45s, frontend 40s.
+
+### Operator notes
+
+- Cargo.lock now drives deterministic builds across machines. Any
+  PR that edits Cargo.toml without refreshing the lock will fail
+  CI; manual fix is to trigger refresh-cargo-lock.yml from the
+  Actions UI.
+- The auto-commit-action push from the refresh workflow does NOT
+  trigger downstream CI (GitHub's loop-prevention default). After
+  a lockfile refresh, push an empty commit or any other change to
+  retrigger CI on the new lockfile.
+
 ## [0.1.0-pre.8] - 2026-05-16
 
 clippy `-D warnings` re-enabled. M3.2 rmcp tool router macro wired.
