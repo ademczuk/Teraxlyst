@@ -2,6 +2,137 @@
 
 All notable changes to Teraxlyst. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/) (pre-`1.0`, minor bumps may include breaking changes).
 
+## [0.1.0-rc3] - 2026-05-16
+
+First multi-platform release candidate. M2.2 (real Claude CLI parser),
+Windows boot, and the no-paid-cert release pipeline all landed in one
+session. Draft release with 18 assets across macOS aarch64 + x86_64,
+Linux x64, Windows x64. Smoke-tested locally on Windows; Sigstore
+build provenance attestation verified end-to-end.
+
+### Added (M2.2 - real Claude CLI parser)
+
+- `src-tauri/src/sessions/provider_claude_code.rs`: rewrote
+  `parse_line` against captured Claude CLI 2.1.118 `stream-json`
+  output. Three-state `classify_json_event` cleanly distinguishes
+  recognized-and-emit, recognized-and-skip (hook lifecycle), and
+  parse-failed-fall-through-to-text. Envelope coverage:
+  - `system + subtype=hook_started|hook_response`: skipped (CLI plumbing)
+  - `system + subtype=init`: `SystemNotice` with model + cwd
+  - `assistant + content[].type=text`: `AssistantText`
+  - `assistant + content[].type=tool_use`: `ToolCall { name, args }`
+  - `user + content[].type=tool_result`: `ToolResult { name, payload }`
+  - `rate_limit_event`: `SystemNotice`
+  - `result`: `Completed`
+  - `error`: `Error`
+  - unknown type: falls through to text
+- `spawn_claude_code` default invocation now uses
+  `claude --print --output-format stream-json --verbose <prompt>`.
+- 11 new unit tests against captured real-CLI samples (total parser
+  tests: 17, all green on Windows). Full suite: 38 pass, 0 fail.
+
+### Added (M0.x - Windows boot fixes)
+
+- `tauri.conf.json`: added `plugins.updater` config block with the
+  embedded minisign public key + GitHub releases endpoint. Previously
+  the missing config block panicked the app during plugin init.
+- `db/actor.rs`: switched `spawn_with_connection` from
+  `tokio::task::spawn_blocking` to `std::thread::Builder::new().spawn()`.
+  Tauri's setup hook runs before the runtime is up, so the tokio call
+  panicked with "no reactor running". The actor body is fully
+  synchronous (rusqlite is blocking and `mpsc::Receiver::blocking_recv`
+  does not require a tokio context), so a plain OS thread works in
+  both Tauri-managed and `#[tokio::test]` paths.
+- End-to-end verified: `pnpm tauri dev` on Windows now boots; vite
+  serves, teraxlyst.exe runs, MCP toolset registers 3 tools, PTY
+  spawns pwsh.exe, WebView2 renders, app survives a relaunch.
+
+### Added (M6.1 - no-paid-cert release pipeline)
+
+- `.github/workflows/release.yml`: multi-platform matrix on `v*` tag
+  push (macOS aarch64+x86_64, ubuntu-22.04, windows-latest). Per-job
+  SHA256SUMS upload + GitHub Actions OIDC build provenance attestation
+  via `actions/attest-build-provenance@v2`. Sigstore-backed chain of
+  custody from commit to binary, no CA involved.
+- Tauri minisign updater keypair generated locally; public key
+  embedded in `tauri.conf.json`. Private key + (empty) password
+  stored as repo secrets `TAURI_SIGNING_PRIVATE_KEY` and
+  `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`. Auto-update path
+  cryptographically guarded without paying a CA.
+- `bundle.targets` switched from `"all"` to an explicit array
+  excluding MSI (the MSI bundler rejects string pre-release tags like
+  `rc3`; NSIS handles full semver). Windows ships NSIS `.exe`
+  installer only.
+- `planning/SIGNING_PLAN.md` rewritten: $0/year path documented as
+  the active plan, the $179/year paid-cert path parked with secrets
+  still named for an easy flip later.
+- `docs/RELEASE.md`: operator-facing rc -> publish -> hotfix ->
+  rollback procedure. Lists the one-time minisign setup steps.
+- `packaging/scoop/teraxlyst.json` + `packaging/homebrew/teraxlyst.rb`:
+  community-driven distribution templates (Scoop, Homebrew Cask).
+  Both use the unsigned release artifacts directly; the Cask formula
+  strips the macOS quarantine attribute on install. Documented in
+  `packaging/README.md`.
+- `INSTALL.md`: added `gh attestation verify --owner ademczuk <file>`
+  invocation so users can prove any release binary came from this
+  repo's CI run.
+
+### Fixed (release pipeline iteration)
+
+- rc1 -> rc2: `@tauri-apps/api` bumped from 2.10.1 to ^2.11.0 to
+  match the `tauri` crate at 2.11.1. `tauri-action`'s `pnpm tauri
+  build` strict-checks the npm/crate match; local `tauri dev` only
+  warned, so the mismatch didn't surface until CI.
+- rc2 -> rc3: dropped MSI from Windows targets after the bundler
+  rejected the `rc2` pre-release identifier with "must be numeric-only
+  and cannot be greater than 65535 for msi target". Knock-on updates
+  to the Scoop manifest, packaging README, release.yml attestation
+  step, and SIGNING_PLAN asset table.
+
+### Verified
+
+- All 38 Rust unit tests pass on Windows (up from 27 in pre.9).
+- 9 frontend vitest tests pass.
+- rc3 release workflow: 4/4 matrix jobs green
+  (https://github.com/ademczuk/Teraxlyst/actions/runs/25957841865).
+- Draft release `Teraxlyst v0.1.0-rc3` populated with 18 assets.
+- Windows NSIS installer smoke-tested locally: silent install via
+  `/S` flag, exit 0, app installed at `%LOCALAPPDATA%\Teraxlyst\`
+  with ProductVersion `0.1.0-rc3`. Installed exe launched, allocated
+  41 MB RSS, survived 8s sample.
+- SHA256 manifest verified: NSIS bundle hash matches
+  `SHA256SUMS-windows.txt`.
+- Sigstore attestation verified end-to-end via
+  `gh attestation verify --owner ademczuk`. Chain proves:
+  sourceRepositoryURI = github.com/ademczuk/Teraxlyst,
+  sourceRepositoryRef = refs/tags/v0.1.0-rc3,
+  buildSignerURI = .github/workflows/release.yml@refs/tags/v0.1.0-rc3,
+  runnerEnvironment = github-hosted,
+  predicateType = https://slsa.dev/provenance/v1.
+
+### Known gaps before promoting to v0.1.0
+
+- macOS + Linux bundles not smoke-tested (Windows-only operator
+  environment this session). Need a real macOS box and a Linux box
+  (or VMs) to install + boot each bundle before publishing.
+- `real_claude_code_smoke` integration test still `cfg(unix)`-gated
+  on Windows; `tauri::test::mock_app` needs `WebView2Loader.dll`
+  copied into `target/debug/deps/`.
+- `planning/M_DOT_ONE_WIREUP.md` step 7 updated to reflect M2.2
+  shipped, but the rest of the M*.1 doc still references
+  M2.2-ready scaffolding rather than M2.2 SHIPPED.
+
+### Cost summary
+
+| Item | This session | Annual |
+|---|---|---|
+| Minisign keypair generation | $0 | $0 |
+| GitHub Actions CI minutes | within free tier | $0 |
+| Apple Developer Program | skipped | $0 |
+| Windows code-signing cert | skipped | $0 |
+| Sigstore provenance | built into Actions | $0 |
+| **Total** | **$0** | **$0** |
+
 ## [0.1.0-pre.9] - 2026-05-16
 
 Polish pass. Cargo.lock now tracked + CI runs --locked. Example
