@@ -245,7 +245,35 @@ fn classify_json_event(value: &Value, raw: &str) -> Option<Option<TranscriptEven
             }
             Some(Some(TranscriptEvent::SystemNotice { text }))
         }
-        "result" => Some(Some(TranscriptEvent::Completed)),
+        "result" => {
+            // Emit usage + duration as a SystemNotice, NOT Completed.
+            // The manager's watcher emits Completed on child exit so
+            // we get exactly one terminal marker per session. The
+            // parser used to emit Completed here too which produced
+            // two "[session completed]" rows in the transcript.
+            let subtype = value.get("subtype").and_then(|v| v.as_str()).unwrap_or("");
+            let dur = value
+                .get("duration_ms")
+                .and_then(|v| v.as_i64())
+                .unwrap_or(0);
+            let cost = value
+                .get("total_cost_usd")
+                .and_then(|v| v.as_f64())
+                .unwrap_or(0.0);
+            let in_tok = value
+                .pointer("/usage/input_tokens")
+                .and_then(|v| v.as_i64())
+                .unwrap_or(0);
+            let out_tok = value
+                .pointer("/usage/output_tokens")
+                .and_then(|v| v.as_i64())
+                .unwrap_or(0);
+            Some(Some(TranscriptEvent::SystemNotice {
+                text: format!(
+                    "result: {subtype} | {dur} ms | {in_tok}+{out_tok} tokens | ${cost:.4}"
+                ),
+            }))
+        }
         "error" => {
             let text = value
                 .get("message")
@@ -462,10 +490,15 @@ mod tests {
     }
 
     #[test]
-    fn parse_result_event_returns_completed() {
-        let line = r#"{"type":"result","subtype":"success","is_error":false,"duration_ms":1000,"num_turns":1,"result":"hi","stop_reason":"end_turn","session_id":"s","total_cost_usd":0.0,"uuid":"u"}"#;
+    fn parse_result_event_becomes_usage_system_notice() {
+        let line = r#"{"type":"result","subtype":"success","is_error":false,"duration_ms":1000,"num_turns":1,"result":"hi","stop_reason":"end_turn","session_id":"s","total_cost_usd":0.0042,"usage":{"input_tokens":12,"output_tokens":34},"uuid":"u"}"#;
         match parse_line(line) {
-            Some(TranscriptEvent::Completed) => {}
+            Some(TranscriptEvent::SystemNotice { text }) => {
+                assert!(text.starts_with("result:"), "got: {text}");
+                assert!(text.contains("1000 ms"));
+                assert!(text.contains("12+34 tokens"));
+                assert!(text.contains("$0.0042"));
+            }
             other => panic!("unexpected event: {:?}", other),
         }
     }

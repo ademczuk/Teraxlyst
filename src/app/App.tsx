@@ -124,25 +124,53 @@ export default function App() {
   const [activeEditorHandle, setActiveEditorHandle] =
     useState<EditorPaneHandle | null>(null);
   const sidebarRef = useRef<PanelImperativeHandle | null>(null);
-  // True when we auto-grew the sidebar for the Diagram/Canvas tab. Used
-  // to only auto-shrink it back if we own the expansion - manual user
-  // drags should be respected.
+  const workspaceRef = useRef<PanelImperativeHandle | null>(null);
+  // True when we auto-grew the sidebar for a wide tab. Used to only
+  // auto-shrink it back if we own the expansion - manual user drags
+  // should be respected.
   const sidebarAutoExpandedRef = useRef(false);
+  // Same idea for the workspace panel: when a wide sidebar tab is
+  // active there's no useful editor/terminal content to show, so
+  // we collapse the workspace pane and give the entire window to
+  // the sidebar's tab content. We only restore the workspace if WE
+  // collapsed it.
+  const workspaceAutoCollapsedRef = useRef(false);
 
   // Wide-tab panels (Sessions, etc) emit this event on mount when
   // they need the sidebar widened but the tab id didn't change (so
   // SidebarTabs.onActiveChange wouldn't fire). Listen globally and
-  // resize unconditionally; the wide layout always wants room.
+  // resize+collapse unconditionally; wide tabs always want full screen.
   useEffect(() => {
-    const handler = () => {
-      const ref = sidebarRef.current;
-      if (!ref) return;
-      ref.resize("900px");
-      sidebarAutoExpandedRef.current = true;
+    const onWide = () => {
+      const sref = sidebarRef.current;
+      const wref = workspaceRef.current;
+      if (sref) {
+        sref.resize("900px");
+        sidebarAutoExpandedRef.current = true;
+      }
+      if (wref && wref.getSize().asPercentage > 0) {
+        wref.collapse();
+        workspaceAutoCollapsedRef.current = true;
+      }
     };
-    window.addEventListener("teraxlyst:request-wide-sidebar", handler);
-    return () =>
-      window.removeEventListener("teraxlyst:request-wide-sidebar", handler);
+    const onNarrow = () => {
+      const sref = sidebarRef.current;
+      const wref = workspaceRef.current;
+      if (sref && sidebarAutoExpandedRef.current) {
+        sref.resize("265px");
+        sidebarAutoExpandedRef.current = false;
+      }
+      if (wref && workspaceAutoCollapsedRef.current) {
+        wref.expand();
+        workspaceAutoCollapsedRef.current = false;
+      }
+    };
+    window.addEventListener("teraxlyst:request-wide-sidebar", onWide);
+    window.addEventListener("teraxlyst:release-wide-sidebar", onNarrow);
+    return () => {
+      window.removeEventListener("teraxlyst:request-wide-sidebar", onWide);
+      window.removeEventListener("teraxlyst:release-wide-sidebar", onNarrow);
+    };
   }, []);
 
   const toggleSidebar = useCallback(() => {
@@ -802,21 +830,15 @@ export default function App() {
                 <div className="h-full border-r border-border/60">
                   <SidebarTabs
                     onActiveChange={(id) => {
-                      // Wide tabs (Notes/Diagram/Canvas/Data) need a
-                      // big content surface. Narrow tabs are nav
-                      // strips. Track whether WE expanded the sidebar
-                      // so we only shrink what we grew - manual user
-                      // drags are respected.
-                      const ref = sidebarRef.current;
-                      if (!ref) return;
-                      const isWide = WIDE_TABS.has(id);
-                      if (isWide && !sidebarAutoExpandedRef.current) {
-                        ref.resize("900px");
-                        sidebarAutoExpandedRef.current = true;
-                      } else if (!isWide && sidebarAutoExpandedRef.current) {
-                        ref.resize("265px");
-                        sidebarAutoExpandedRef.current = false;
-                      }
+                      // Wide tabs (Sessions/Notes/Diagram/Canvas/Data)
+                      // need the full window. Dispatch the same global
+                      // events the in-tab useEffects use so the wide
+                      // sidebar + collapsed workspace state stays in
+                      // one place (the listener in this component).
+                      const eventName = WIDE_TABS.has(id)
+                        ? "teraxlyst:request-wide-sidebar"
+                        : "teraxlyst:release-wide-sidebar";
+                      window.dispatchEvent(new CustomEvent(eventName));
                     }}
                     files={{
                       rootPath: explorerRoot,
@@ -830,7 +852,14 @@ export default function App() {
                 </div>
               </ResizablePanel>
               <ResizableHandle withHandle />
-              <ResizablePanel id="workspace" defaultSize="78%" minSize="30%">
+              <ResizablePanel
+                id="workspace"
+                panelRef={workspaceRef}
+                defaultSize="78%"
+                minSize="30%"
+                collapsible
+                collapsedSize={0}
+              >
                 <div className="flex h-full min-h-0 flex-col">
                   <div className="relative min-h-0 flex-1">
                     <div
