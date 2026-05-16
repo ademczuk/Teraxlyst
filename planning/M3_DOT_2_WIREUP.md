@@ -45,37 +45,37 @@ gained `JsonSchema` since it nests inside `PromptForUserInputArgs`.
 
 Three module-wide `#![allow(dead_code)]` headers were removed:
 
-- `src-tauri/src/mcp/mod.rs` — macro-generated dispatcher now references
+- `src-tauri/src/mcp/mod.rs` - macro-generated dispatcher now references
   the Args + tool surface.
-- `src-tauri/src/diff/mod.rs` — `diff::commands::diff_apply_and_resolve`
+- `src-tauri/src/diff/mod.rs` - `diff::commands::diff_apply_and_resolve`
   is registered in `invoke_handler`.
-- `src-tauri/src/trackers/mod.rs` — tracker commands are registered in
+- `src-tauri/src/trackers/mod.rs` - tracker commands are registered in
   `invoke_handler`.
 
 ## Remaining targeted allow(dead_code) annotations
 
 Kept with justification:
 
-- `db::error::DbError::Io` and `mcp::error::McpError::Serde` — only
+- `db::error::DbError::Io` and `mcp::error::McpError::Serde` - only
   constructed via `#[from]` from paths v1 doesn't exercise (existing
   annotations, unchanged).
-- `mcp::tools::SharedToolset` type alias — reserved for M3.2 in-process
+- `mcp::tools::SharedToolset` type alias - reserved for M3.2 in-process
   session loops (existing).
-- `mcp::server::McpToolset` type alias — same (existing).
-- `trackers::mcp_wrappers` module — entire file kept under
+- `mcp::server::McpToolset` type alias - same (existing).
+- `trackers::mcp_wrappers` module - entire file kept under
   `#![allow(dead_code)]` per the file's own header; the four
   `mcp_tracker_*` functions are scaffolds waiting for M4 wiring into
   `TeraxlystToolset`.
 
 No new allows were needed for `mcp/diff_pipeline.rs`,
-`mcp/prompt_pipeline.rs`, or the rest of the trackers module — every
+`mcp/prompt_pipeline.rs`, or the rest of the trackers module - every
 public item is reachable from a command, tool, or test.
 
 ## Style lint fixes
 
-- `src/sessions/provider_claude_code.rs:152` — dropped redundant
+- `src/sessions/provider_claude_code.rs:152` - dropped redundant
   `trim_start()` before `split_whitespace()`.
-- `src/trackers/commands.rs:79` — removed explicit `.into_iter()` from
+- `src/trackers/commands.rs:79` - removed explicit `.into_iter()` from
   the `.zip()` call.
 
 ## CI change

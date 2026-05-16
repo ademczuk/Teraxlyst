@@ -27,25 +27,25 @@ min/max widened so the panels fit comfortably.
 
 State machine is just `useState<"files" | "sessions" | "trackers" | "diffs">`
 inside `SidebarTabs`. Default is `"files"` so the FileExplorer-first
-behaviour is preserved. No global store needed — the tab is pure local
+behaviour is preserved. No global store needed - the tab is pure local
 UI state.
 
 ## Files added
 
-- `src/app/SidebarTabs.tsx` — icon strip + active panel switcher.
-- `src/app/panels/FilesPanel.tsx` — forwards every prop to FileExplorer
+- `src/app/SidebarTabs.tsx` - icon strip + active panel switcher.
+- `src/app/panels/FilesPanel.tsx` - forwards every prop to FileExplorer
   unchanged. Keeps the rename / delete / reveal-in-terminal /
   attach-to-agent wiring identical to the old standalone mount.
-- `src/app/panels/SessionsPanel.tsx` — wraps `SessionList` (which
+- `src/app/panels/SessionsPanel.tsx` - wraps `SessionList` (which
   already ships its own "Start session" prompt).
-- `src/app/panels/TrackersPanel.tsx` — list/table state machine. Calls
+- `src/app/panels/TrackersPanel.tsx` - list/table state machine. Calls
   `db_list_workspaces`, picks workspaces[0], invokes
   `tracker_load_workspace` to parse YAML + sync to DB, then renders the
   tracker list. Click drills into a TrackerTable that calls
   `tracker_list_items` and renders up to four schema fields in a
   compact table. Back arrow returns to the list. Parse errors surface
   inline under the list.
-- `src/app/panels/DiffsPanel.tsx` — wraps `DiffInbox` (which already has
+- `src/app/panels/DiffsPanel.tsx` - wraps `DiffInbox` (which already has
   list + Monaco viewer side-by-side, so no modal needed).
 
 ## Files modified
@@ -63,13 +63,13 @@ Kept unchanged. `FilesPanel` is a one-liner pass-through; the file tree
 still receives `rootPath`, `onOpenFile`, `onPathRenamed`,
 `onPathDeleted`, `onRevealInTerminal`, `onAttachToAgent` and routes
 them up to `App` exactly as before. `PromptForUserInputDialog` stays
-at the top level — it is a modal triggered by MCP events from
+at the top level - it is a modal triggered by MCP events from
 anywhere, not a panel.
 
 ## TS / build notes
 
-- `pnpm exec tsc --noEmit` — clean (EXIT=0).
-- `pnpm build` — clean (12.46s, EXIT=0).
+- `pnpm exec tsc --noEmit` - clean (EXIT=0).
+- `pnpm build` - clean (12.46s, EXIT=0).
 - The Rust commands' camelCase IPC arg names (`workspaceId`,
   `workspacePath`, `args`) match how `SessionList` already invokes
   them, so no serde mismatch.
