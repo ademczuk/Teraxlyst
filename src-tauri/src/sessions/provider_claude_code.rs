@@ -53,6 +53,14 @@ pub fn spawn_claude_code(
         }
         None => {
             let mut c = Command::new(CLAUDE_BIN);
+            // CLAUDE_CODE_ENTRYPOINT=cli tells the Anthropic backend that
+            // this spawn is the official CLI (vs a third-party SDK
+            // consumer). Without it OAuth subscriptions get the much
+            // stricter sdk-ts rate-limit bucket; with it we get the full
+            // CLI OAuth allowance. Confirmed by nimbalyst issue #174 and
+            // their packages/runtime/src/ai/server/providers/claudeCode/
+            // sdkOptionsBuilder.ts.
+            c.env("CLAUDE_CODE_ENTRYPOINT", "cli");
             // Verified against Claude CLI 2.1.118 on Windows: this flag set
             // produces newline-delimited JSON envelopes that parse_line knows
             // how to decode. --verbose is required by the CLI when stream-json
@@ -200,10 +208,42 @@ fn classify_json_event(value: &Value, raw: &str) -> Option<Option<TranscriptEven
             Some(None)
         }
         "rate_limit_event" => {
-            let info = value.get("rate_limit_info").cloned().unwrap_or(Value::Null);
-            Some(Some(TranscriptEvent::SystemNotice {
-                text: format!("rate_limit: {}", info),
-            }))
+            // Human-readable formatting: extract status, rate-limit type,
+            // resetsAt (unix seconds), and utilization. Falls back to the
+            // raw JSON dump if shape doesn't match. Renderer can string-
+            // match the "[RATE_LIMIT]" or "[RATE_LIMIT_WARNING]" prefix
+            // to surface a banner; the legacy raw text stays in the
+            // payload as a fallback.
+            let info = value.get("rate_limit_info");
+            let status = info
+                .and_then(|i| i.get("status"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("unknown");
+            let limit_type = info
+                .and_then(|i| i.get("rateLimitType"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("unknown");
+            let resets_at = info
+                .and_then(|i| i.get("resetsAt"))
+                .and_then(|v| v.as_i64());
+            let utilization = info
+                .and_then(|i| i.get("utilization"))
+                .and_then(|v| v.as_f64());
+            let prefix = if status == "allowed" {
+                "rate_limit_ok"
+            } else if status == "allowed_warning" {
+                "[RATE_LIMIT_WARNING]"
+            } else {
+                "[RATE_LIMIT]"
+            };
+            let mut text = format!("{prefix} status={status} limitType={limit_type}");
+            if let Some(rs) = resets_at {
+                text.push_str(&format!(" resetsAtUnix={rs}"));
+            }
+            if let Some(u) = utilization {
+                text.push_str(&format!(" usage={}%", (u * 100.0).round() as i32));
+            }
+            Some(Some(TranscriptEvent::SystemNotice { text }))
         }
         "result" => Some(Some(TranscriptEvent::Completed)),
         "error" => {
@@ -400,8 +440,22 @@ mod tests {
         let line = r#"{"type":"rate_limit_event","rate_limit_info":{"status":"allowed","resetsAt":1778922000,"rateLimitType":"five_hour"},"uuid":"u","session_id":"s"}"#;
         match parse_line(line) {
             Some(TranscriptEvent::SystemNotice { text }) => {
-                assert!(text.starts_with("rate_limit:"));
-                assert!(text.contains("allowed"));
+                assert!(text.starts_with("rate_limit_ok"));
+                assert!(text.contains("status=allowed"));
+                assert!(text.contains("limitType=five_hour"));
+                assert!(text.contains("resetsAtUnix=1778922000"));
+            }
+            other => panic!("unexpected event: {:?}", other),
+        }
+    }
+
+    #[test]
+    fn parse_rate_limit_exceeded_marks_with_bracket_tag() {
+        let line = r#"{"type":"rate_limit_event","rate_limit_info":{"status":"exceeded","resetsAt":1778922000,"rateLimitType":"five_hour","utilization":1.0}}"#;
+        match parse_line(line) {
+            Some(TranscriptEvent::SystemNotice { text }) => {
+                assert!(text.starts_with("[RATE_LIMIT]"), "got: {text}");
+                assert!(text.contains("usage=100%"));
             }
             other => panic!("unexpected event: {:?}", other),
         }

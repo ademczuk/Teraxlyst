@@ -18,6 +18,37 @@ type WorkspaceLite = { id: number; name: string; path: string };
 
 const MAX_TRANSCRIPT_ROWS = 50;
 
+// Pulls structured fields out of the parser's rate-limit text. The
+// Rust side formats these as
+//   "[RATE_LIMIT] status=exceeded limitType=five_hour resetsAtUnix=1778922000 usage=100%"
+function parseRateLimitText(text: string): {
+  isWarning: boolean;
+  limitType: string;
+  resetsAtUnix: number | null;
+  usagePercent: number | null;
+} {
+  const isWarning = text.startsWith("[RATE_LIMIT_WARNING]");
+  const ltMatch = text.match(/limitType=(\S+)/);
+  const rsMatch = text.match(/resetsAtUnix=(\d+)/);
+  const usageMatch = text.match(/usage=(\d+)%/);
+  return {
+    isWarning,
+    limitType: ltMatch?.[1] ?? "unknown",
+    resetsAtUnix: rsMatch ? Number(rsMatch[1]) : null,
+    usagePercent: usageMatch ? Number(usageMatch[1]) : null,
+  };
+}
+
+function formatResetCountdown(resetsAtUnix: number | null, nowMs: number): string {
+  if (!resetsAtUnix) return "reset time unknown";
+  const deltaSec = Math.max(0, resetsAtUnix - Math.floor(nowMs / 1000));
+  if (deltaSec === 0) return "should be reset now (refresh)";
+  const h = Math.floor(deltaSec / 3600);
+  const m = Math.floor((deltaSec % 3600) / 60);
+  if (h > 0) return `resets in ${h}h ${m}m`;
+  return `resets in ${m}m`;
+}
+
 export function SessionList(){
   const { state, createSession, killSession, refreshRunning } = useSessions();
 
@@ -25,6 +56,13 @@ export function SessionList(){
   const [prompt, setPrompt] = useState<string>("");
   const [creating, setCreating] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  // Tick once per 30s so the rate-limit countdown banner refreshes
+  // without re-rendering the whole transcript on every frame.
+  const [now, setNow] = useState<number>(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 30000);
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -107,6 +145,25 @@ export function SessionList(){
     return flat.slice(-MAX_TRANSCRIPT_ROWS);
   }, [state.transcripts]);
 
+  // Surface the most recent [RATE_LIMIT] / [RATE_LIMIT_WARNING] notice as
+  // a banner. The Rust parser tags rate_limit_event SystemNotices with
+  // these bracket prefixes when status != "allowed" so we can string-
+  // match cheaply here.
+  const rateLimitBanner = useMemo(() => {
+    for (let i = recentEvents.length - 1; i >= 0; i--) {
+      const ev = recentEvents[i]?.event;
+      if (ev && ev.type === "system_notice" && typeof ev.text === "string") {
+        if (
+          ev.text.startsWith("[RATE_LIMIT]") ||
+          ev.text.startsWith("[RATE_LIMIT_WARNING]")
+        ) {
+          return parseRateLimitText(ev.text);
+        }
+      }
+    }
+    return null;
+  }, [recentEvents]);
+
   return (
     <div className="flex h-full flex-col gap-3 p-3 text-sm">
       <div className="flex items-center gap-2">
@@ -123,6 +180,36 @@ export function SessionList(){
       {error ? (
         <div className="rounded border border-destructive bg-destructive/10 px-2 py-1 text-xs text-destructive">
           {error}
+        </div>
+      ) : null}
+
+      {rateLimitBanner ? (
+        <div
+          data-testid="rate-limit-banner"
+          className={
+            rateLimitBanner.isWarning
+              ? "rounded border border-yellow-500/60 bg-yellow-500/10 px-3 py-2 text-xs text-yellow-200"
+              : "rounded border border-red-500/60 bg-red-500/10 px-3 py-2 text-xs text-red-200"
+          }
+        >
+          <div className="font-semibold">
+            {rateLimitBanner.isWarning
+              ? "Claude rate limit warning"
+              : "Claude rate limit hit"}
+          </div>
+          <div className="opacity-80">
+            limit type: {rateLimitBanner.limitType}
+            {rateLimitBanner.usagePercent != null
+              ? ` (${rateLimitBanner.usagePercent}% used)`
+              : ""}
+            {" - "}
+            {formatResetCountdown(rateLimitBanner.resetsAtUnix, now)}
+          </div>
+          <div className="mt-1 opacity-70">
+            New sessions will use the OAuth allowance the Claude CLI
+            sees; CLAUDE_CODE_ENTRYPOINT=cli is set in the spawn env
+            to avoid the stricter third-party SDK bucket.
+          </div>
         </div>
       ) : null}
 
