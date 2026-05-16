@@ -22,13 +22,38 @@ const EVENT_CHANNEL = "teraxlyst:session-events";
 // Max events kept in memory per session. The UI only renders the last 50
 // per the M2.0 spec; we keep a small margin so a fast flush doesn't drop
 // the in-flight ones before render.
-const RING_CAP = 200;
+export const RING_CAP = 200;
 
 export type SessionsState = {
   runningIds: number[];
   // session_id -> last N events (capped at RING_CAP)
   transcripts: Record<number, TranscriptEvent[]>;
 };
+
+// Pure reducer extracted so it can be unit-tested without spinning up the
+// Tauri event subscription. Applies one event batch, enforces the ring-buffer
+// cap, and drops the session_id from runningIds on a completed event.
+export function applyTranscriptBatch(
+  prev: SessionsState,
+  batch: SessionEventBatch,
+): SessionsState {
+  const existing = prev.transcripts[batch.session_id] ?? [];
+  const merged = existing.concat(batch.events);
+  const trimmed =
+    merged.length > RING_CAP ? merged.slice(-RING_CAP) : merged;
+  const nextTranscripts = {
+    ...prev.transcripts,
+    [batch.session_id]: trimmed,
+  };
+  const completed = batch.events.some((e) => e.type === "completed");
+  const runningIds = completed
+    ? prev.runningIds.filter((id) => id !== batch.session_id)
+    : prev.runningIds;
+  return {
+    runningIds,
+    transcripts: nextTranscripts,
+  };
+}
 
 export type UseSessionsApi = {
   state: SessionsState;
@@ -71,25 +96,7 @@ export function useSessions(): UseSessionsApi {
         EVENT_CHANNEL,
         (envelope) => {
           const batch = envelope.payload;
-          setState((prev) => {
-            const existing = prev.transcripts[batch.session_id] ?? [];
-            const merged = existing.concat(batch.events);
-            const trimmed =
-              merged.length > RING_CAP ? merged.slice(-RING_CAP) : merged;
-            const nextTranscripts = {
-              ...prev.transcripts,
-              [batch.session_id]: trimmed,
-            };
-            // If we see a Completed event, drop the session id from running.
-            const completed = batch.events.some((e) => e.type === "completed");
-            const runningIds = completed
-              ? prev.runningIds.filter((id) => id !== batch.session_id)
-              : prev.runningIds;
-            return {
-              runningIds,
-              transcripts: nextTranscripts,
-            };
-          });
+          setState((prev) => applyTranscriptBatch(prev, batch));
         },
       );
 
