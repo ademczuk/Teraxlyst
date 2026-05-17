@@ -53,7 +53,7 @@ jobs:
 
       - name: Commit refreshed Cargo.lock
         if: steps.check.outputs.changed == 'true'
-        uses: stefanzweifel/git-auto-commit-action@v5
+        uses: stefanzweifel/git-auto-commit-action@v7
         with:
           commit_message: "chore(deps): refresh src-tauri/Cargo.lock via workflow_dispatch"
           file_pattern: src-tauri/Cargo.lock
