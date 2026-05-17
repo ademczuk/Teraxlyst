@@ -45,7 +45,7 @@ bytes = "1"
 futures-util = "0.3"
 rusqlite = { version = "0.31", features = ["bundled", "serde_json"] }
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "fs", "time", "io-util"] }
-thiserror = "1"
+thiserror = "2"
 ulid = { version = "1", features = ["serde"] }
 # MCP host (M3). server + transport-io enables stdio transport. macros and
 # schemars are enabled by default and we use both.
