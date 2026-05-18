@@ -52,7 +52,7 @@ ulid = { version = "1", features = ["serde"] }
 rmcp = { version = "1.7", default-features = true, features = ["server", "transport-io"] }
 schemars = "1"
 # Unified-diff computation for propose_diff.
-similar = "2"
+similar = "3"
 # YAML parser for M4 trackers. Maintained fork of dtolnay's serde_yaml,
 # which was deprecated in 2024. serde_yaml_ng tracks the original API
 # exactly so we can swap forks later without code churn.
