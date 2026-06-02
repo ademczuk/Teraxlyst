@@ -205,7 +205,7 @@ jobs:
       # Free, no CA, no Apple Developer Program.
       - name: Generate build provenance attestation
         if: matrix.platform != 'windows-latest'
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v4
         with:
           subject-path: |
             src-tauri/target/${{ matrix.rust-target != '' && format('{0}/release', matrix.rust-target) || 'release' }}/bundle/**/*.deb
@@ -216,7 +216,7 @@ jobs:
 
       - name: Generate build provenance attestation (windows)
         if: matrix.platform == 'windows-latest'
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v4
         with:
           subject-path: |
             src-tauri/target/release/bundle/**/*.exe
