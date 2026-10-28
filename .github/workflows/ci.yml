@@ -96,10 +96,13 @@ jobs:
       # chain pulls in 10+ "unmaintained" gtk-rs warnings that we
       # cannot fix without forking Tauri; --ignore RUSTSEC-2024-0370
       # etc. would catalog them, but until upstream Tauri migrates
-      # to gtk4 we tolerate the noise and fail only on actual CVEs
-      # via --deny vulnerabilities (the default).
+      # to gtk4 we tolerate the noise and fail only on actual CVEs.
+      # cargo audit already exits 1 on any vulnerability by default;
+      # warnings only fail with --deny <warnings|unmaintained|unsound|
+      # yanked>. "vulnerabilities" is not a --deny value: clap rejected
+      # it and the step exited 2 on every run, whatever the lockfile held.
       - name: Install cargo-audit
         run: cargo install cargo-audit --locked --version "^0.22"
       - name: cargo audit
         working-directory: src-tauri
-        run: cargo audit --deny vulnerabilities
+        run: cargo audit
